@@ -91,66 +91,11 @@ export interface DiffResult {
   intensityStats: IntensityStats | null;
   /** SSIM (Structural Similarity Index) perceptual score 0.0-1.0 (null unless includeSSIM is enabled) */
   perceptualScore: number | null;
-  /**
-   * GMSD (Gradient Magnitude Similarity Deviation) score (null unless includeGMSD is enabled)
-   * Lower values (closer to 0.0) indicate more similar images
-   * Typical range: 0.0 to ~0.3 for natural images
-   */
-  gmsdScore: number | null;
 }
 
 // ============================================================================
 // Options
 // ============================================================================
-
-/**
- * Options for merging nearby clusters
- *
- * These heuristics are designed to merge fragmented text regions (like individual
- * characters in a date string) into logical regions while avoiding merging
- * unrelated visual changes.
- *
- * Inspired by the Stroke Width Transform (SWT) text detection algorithm:
- * Epshtein, B., Ofek, E., & Wexler, Y. (2010). "Detecting Text in Natural Scenes
- * with Stroke Width Transform." CVPR 2010.
- */
-export interface ClusterMergeOptions {
-  /**
-   * Maximum horizontal distance to merge clusters in same Y-band (pixels)
-   *
-   * Clusters within this horizontal distance and overlapping Y-ranges
-   * will be merged. Suitable for merging characters in text.
-   * @default 15
-   */
-  horizontalDistance?: number;
-
-  /**
-   * Maximum vertical tolerance for "same Y-band" (pixels)
-   *
-   * Clusters with Y-ranges within this tolerance of each other are
-   * considered to be on the same line.
-   * @default 5
-   */
-  yBandTolerance?: number;
-
-  /**
-   * Maximum height ratio between clusters to allow merging
-   *
-   * Prevents merging clusters of very different sizes (e.g., a word
-   * with a large image). Based on SWT heuristic.
-   * @default 2.0
-   */
-  maxHeightRatio?: number;
-
-  /**
-   * Maximum width ratio between clusters to allow merging
-   *
-   * Additional SWT-inspired heuristic to prevent merging dissimilar
-   * regions.
-   * @default 3.0
-   */
-  maxWidthRatio?: number;
-}
 
 export interface CompareOptions {
   /**
@@ -201,23 +146,6 @@ export interface CompareOptions {
   includeSSIM?: boolean;
 
   /**
-   * Calculate GMSD (Gradient Magnitude Similarity Deviation) score
-   *
-   * GMSD is very fast and highly sensitive to edge/structural changes.
-   * Useful for detecting border thickness changes, font weight shifts,
-   * and icon updates.
-   *
-   * **Note:** GMSD requires images with identical dimensions. For variable-height
-   * comparisons, `gmsdScore` will be `null`. Use SSIM for variable-height images.
-   *
-   * Reference: Xue et al. 2014 - "Gradient Magnitude Similarity Deviation:
-   * A Highly Efficient Perceptual Image Quality Index"
-   *
-   * @default false
-   */
-  includeGMSD?: boolean;
-
-  /**
    * Minimum cluster size to count as a real difference
    *
    * Clusters smaller than this threshold are filtered out as noise.
@@ -232,28 +160,6 @@ export interface CompareOptions {
    * @default 2
    */
   minClusterSize?: number;
-
-  /**
-   * Merge nearby clusters into logical regions
-   *
-   * When enabled, nearby clusters are merged using horizontal-biased heuristics
-   * that work well for text regions. This helps consolidate fragmented text
-   * changes (e.g., "2024-01-01" showing as 59 clusters) into logical regions.
-   *
-   * Automatically enables clustering when set.
-   *
-   * @default undefined (no merging)
-   *
-   * @example
-   * ```typescript
-   * // Simple: enable merging with sensible defaults
-   * { clusterMerge: true }
-   *
-   * // Advanced: tune the merging behavior
-   * { clusterMerge: { horizontalDistance: 20, yBandTolerance: 10 } }
-   * ```
-   */
-  clusterMerge?: boolean | ClusterMergeOptions;
 
   /**
    * Path to save the diff image (highlighted differences)

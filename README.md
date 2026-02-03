@@ -188,39 +188,10 @@ if (result.diffClusters) {
 | 2 | Default - filters single isolated pixels as rendering noise |
 | 3+ | More permissive - only larger clusters detected |
 
-**Cluster Merging for Text Regions:**
-
-Text changes often fragment into many small clusters (one per character). Enable cluster merging to consolidate them into logical regions:
-
-```javascript
-// Simple: enable with sensible defaults
-const result = await compare('img1.png', 'img2.png', {
-  includeClusters: true,
-  clusterMerge: true  // Merge nearby clusters (great for text)
-});
-
-// Advanced: tune the merging behavior
-const result = await compare('img1.png', 'img2.png', {
-  includeClusters: true,
-  clusterMerge: {
-    horizontalDistance: 15,  // Max gap between clusters to merge (pixels)
-    yBandTolerance: 5,       // Vertical tolerance for "same line"
-    maxHeightRatio: 2.0,     // Prevent merging very different sized clusters
-    maxWidthRatio: 3.0
-  }
-});
-
-// Before: "2024-01-01" detected as 59 clusters (one per character/gap)
-// After:  "2024-01-01" detected as 1-2 logical regions
-```
-
-Uses SWT-inspired heuristics from text detection research (Epshtein et al. 2010).
-
-### 6. Perceptual Similarity (SSIM & GMSD)
+### 6. Perceptual Similarity (SSIM)
 
 Beyond pixel counting - measure structural similarity from a human perception perspective.
 
-**SSIM (Structural Similarity Index)** - Overall perceptual similarity:
 ```javascript
 const result = await compare('img1.png', 'img2.png', {
   includeSSIM: true  // Note: Can be slow on large images
@@ -229,32 +200,12 @@ const result = await compare('img1.png', 'img2.png', {
 if (result.perceptualScore !== null) {
   console.log(`SSIM: ${result.perceptualScore.toFixed(3)}`);
   // Output: SSIM: 0.923 (0.0 = different, 1.0 = identical)
-}
-```
 
-**GMSD (Gradient Magnitude Similarity Deviation)** - Fast edge-sensitive metric:
-```javascript
-const result = await compare('img1.png', 'img2.png', {
-  includeGMSD: true  // Very fast, great for detecting structural changes
-});
-
-if (result.gmsdScore !== null) {
-  console.log(`GMSD: ${result.gmsdScore.toFixed(4)}`);
-  // Output: GMSD: 0.0234 (0.0 = identical, higher = more different)
-
-  if (result.gmsdScore < 0.05) {
-    console.log('Edges are very similar');
+  if (result.perceptualScore > 0.95) {
+    console.log('Images are perceptually very similar');
   }
 }
 ```
-
-GMSD is ideal for catching:
-- Border thickness changes
-- Font weight shifts
-- Icon updates
-- Any edge/outline regressions
-
-**Reference:** Xue et al. 2014 - "Gradient Magnitude Similarity Deviation: A Highly Efficient Perceptual Image Quality Index"
 
 ### 7. Tolerance & Color Spaces
 
@@ -607,22 +558,22 @@ All functions accept:
 ```typescript
 interface CompareOptions {
   // Basic options
-  threshold?: number;                   // CIEDE2000 Delta E threshold (default: 2.0)
+  pixelTolerance?: number;              // 0-255, ignore diffs below threshold (default: 0)
+  colorThreshold?: number;              // 0.0-1.0, YIQ mode threshold (default: 0.0 = RGB)
   antialiasing?: boolean;               // Ignore AA artifacts (default: true)
+  ignoreColors?: boolean;               // Brightness only (default: false)
   maxDiffs?: number;                    // Stop after N diffs (default: unlimited)
 
   // Analysis options
   includeDiffPixels?: boolean;          // List all diff pixels (memory intensive, default: false)
   includeClusters?: boolean;            // Spatial clustering (default: false)
   includeSSIM?: boolean;                // SSIM perceptual score (slow, default: false)
-  includeGMSD?: boolean;                // GMSD edge similarity (fast, default: false)
   minClusterSize?: number;              // Filter clusters smaller than this (default: 2)
-  clusterMerge?: boolean | {            // Merge nearby clusters (default: false)
-    horizontalDistance?: number;        // Max horizontal gap to merge (default: 15)
-    yBandTolerance?: number;            // Vertical "same line" tolerance (default: 5)
-    maxHeightRatio?: number;            // Max height ratio to merge (default: 2.0)
-    maxWidthRatio?: number;             // Max width ratio to merge (default: 3.0)
-  };
+
+  // Accessibility options
+  includeAccessibilityData?: boolean;   // RGB, luminance, WCAG (default: false)
+  checkColorBlindness?: boolean;        // Color blindness simulation (default: false)
+  colorBlindnessThreshold?: number;     // Visibility threshold 0-255 (default: 30.0)
 
   // Output options
   diffPath?: string;                    // Save diff image path
@@ -655,8 +606,7 @@ interface DiffResult {
   diffPixelsList: DiffPixel[] | null;   // Null unless includeDiffPixels enabled
   diffClusters: DiffCluster[] | null;   // Null unless includeClusters enabled
   intensityStats: IntensityStats | null; // Null unless includeDiffPixels enabled
-  perceptualScore: number | null;       // SSIM 0.0-1.0, null unless includeSSIM enabled
-  gmsdScore: number | null;             // GMSD 0.0+, null unless includeGMSD enabled
+  perceptualScore: number | null;       // 0.0-1.0, null unless includeSSIM enabled
 }
 ```
 
