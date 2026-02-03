@@ -91,11 +91,66 @@ export interface DiffResult {
   intensityStats: IntensityStats | null;
   /** SSIM (Structural Similarity Index) perceptual score 0.0-1.0 (null unless includeSSIM is enabled) */
   perceptualScore: number | null;
+  /**
+   * GMSD (Gradient Magnitude Similarity Deviation) score (null unless includeGMSD is enabled)
+   * Lower values (closer to 0.0) indicate more similar images
+   * Typical range: 0.0 to ~0.3 for natural images
+   */
+  gmsdScore: number | null;
 }
 
 // ============================================================================
 // Options
 // ============================================================================
+
+/**
+ * Options for merging nearby clusters
+ *
+ * These heuristics are designed to merge fragmented text regions (like individual
+ * characters in a date string) into logical regions while avoiding merging
+ * unrelated visual changes.
+ *
+ * Inspired by the Stroke Width Transform (SWT) text detection algorithm:
+ * Epshtein, B., Ofek, E., & Wexler, Y. (2010). "Detecting Text in Natural Scenes
+ * with Stroke Width Transform." CVPR 2010.
+ */
+export interface ClusterMergeOptions {
+  /**
+   * Maximum horizontal distance to merge clusters in same Y-band (pixels)
+   *
+   * Clusters within this horizontal distance and overlapping Y-ranges
+   * will be merged. Suitable for merging characters in text.
+   * @default 15
+   */
+  horizontalDistance?: number;
+
+  /**
+   * Maximum vertical tolerance for "same Y-band" (pixels)
+   *
+   * Clusters with Y-ranges within this tolerance of each other are
+   * considered to be on the same line.
+   * @default 5
+   */
+  yBandTolerance?: number;
+
+  /**
+   * Maximum height ratio between clusters to allow merging
+   *
+   * Prevents merging clusters of very different sizes (e.g., a word
+   * with a large image). Based on SWT heuristic.
+   * @default 2.0
+   */
+  maxHeightRatio?: number;
+
+  /**
+   * Maximum width ratio between clusters to allow merging
+   *
+   * Additional SWT-inspired heuristic to prevent merging dissimilar
+   * regions.
+   * @default 3.0
+   */
+  maxWidthRatio?: number;
+}
 
 export interface CompareOptions {
   /**
@@ -146,6 +201,23 @@ export interface CompareOptions {
   includeSSIM?: boolean;
 
   /**
+   * Calculate GMSD (Gradient Magnitude Similarity Deviation) score
+   *
+   * GMSD is very fast and highly sensitive to edge/structural changes.
+   * Useful for detecting border thickness changes, font weight shifts,
+   * and icon updates.
+   *
+   * **Note:** GMSD requires images with identical dimensions. For variable-height
+   * comparisons, `gmsdScore` will be `null`. Use SSIM for variable-height images.
+   *
+   * Reference: Xue et al. 2014 - "Gradient Magnitude Similarity Deviation:
+   * A Highly Efficient Perceptual Image Quality Index"
+   *
+   * @default false
+   */
+  includeGMSD?: boolean;
+
+  /**
    * Minimum cluster size to count as a real difference
    *
    * Clusters smaller than this threshold are filtered out as noise.
@@ -160,6 +232,28 @@ export interface CompareOptions {
    * @default 2
    */
   minClusterSize?: number;
+
+  /**
+   * Merge nearby clusters into logical regions
+   *
+   * When enabled, nearby clusters are merged using horizontal-biased heuristics
+   * that work well for text regions. This helps consolidate fragmented text
+   * changes (e.g., "2024-01-01" showing as 59 clusters) into logical regions.
+   *
+   * Automatically enables clustering when set.
+   *
+   * @default undefined (no merging)
+   *
+   * @example
+   * ```typescript
+   * // Simple: enable merging with sensible defaults
+   * { clusterMerge: true }
+   *
+   * // Advanced: tune the merging behavior
+   * { clusterMerge: { horizontalDistance: 20, yBandTolerance: 10 } }
+   * ```
+   */
+  clusterMerge?: boolean | ClusterMergeOptions;
 
   /**
    * Path to save the diff image (highlighted differences)
@@ -1049,3 +1143,131 @@ export function analyzeWcagAllCvdSync(img: ImageInput, options?: WcagOptions): C
  * ```
  */
 export function getColorBlindnessTypes(): ColorBlindnessTypeInfo[];
+
+// ============================================================================
+// Diff Fingerprint API
+// ============================================================================
+
+/**
+ * Magnitude of a diff, bucketed into categories
+ */
+export type DiffMagnitude = 'tiny' | 'small' | 'medium' | 'large' | 'massive';
+
+/**
+ * A compact fingerprint representing a diff's key characteristics.
+ * Used for grouping similar diffs across comparisons.
+ */
+export interface DiffFingerprint {
+  /** Number of clusters (distinct change regions) */
+  clusterCount: number;
+
+  /** Normalized positions of cluster centers (0.0-1.0 relative to image dimensions) */
+  clusterPositions: [number, number][];
+
+  /** Normalized sizes of clusters (area as ratio of total image area) */
+  clusterSizes: number[];
+
+  /** Average intensity across all clusters (0-255 scale) */
+  avgIntensity: number;
+
+  /** Average cluster density (pixels / bounding_box_area) */
+  avgDensity: number;
+
+  /**
+   * Spatial distribution hash using a 4x4 grid (16 zones).
+   * Each bit represents whether that zone contains a cluster center.
+   */
+  zoneMask: number;
+
+  /** Overall diff percentage bucketed into categories */
+  diffMagnitude: DiffMagnitude;
+
+  /** Pre-computed coarse hash for fast grouping (hex string) */
+  hash: string;
+}
+
+/**
+ * Compute a fingerprint from a diff result (synchronous)
+ *
+ * Creates a compact fingerprint that can be used to identify and group similar diffs
+ * across different image comparisons. Requires that the diff result was computed with
+ * `includeClusters: true`.
+ *
+ * @param diffResult - The result from a compare() call with clusters enabled
+ * @param imageWidth - Width of the compared images in pixels
+ * @param imageHeight - Height of the compared images in pixels
+ * @returns A DiffFingerprint object, or null if no clusters are present
+ *
+ * @example
+ * ```typescript
+ * const result = await compare('baseline.png', 'current.png', {
+ *   includeClusters: true
+ * });
+ *
+ * const fingerprint = computeFingerprintSync(result, 1920, 1080);
+ * if (fingerprint) {
+ *   console.log(`Hash: ${fingerprint.hash}`);
+ *   console.log(`Zones: ${fingerprint.zoneMask.toString(2).padStart(16, '0')}`);
+ * }
+ * ```
+ */
+export function computeFingerprintSync(
+  diffResult: DiffResult,
+  imageWidth: number,
+  imageHeight: number
+): DiffFingerprint | null;
+
+/**
+ * Compare two fingerprints and return a similarity score (synchronous)
+ *
+ * Returns a score from 0.0 (completely different) to 1.0 (identical).
+ * The similarity is computed using weighted factors:
+ * - Zone mask overlap (40%): Same regions affected
+ * - Cluster count similarity (20%): Similar number of change regions
+ * - Diff magnitude match (15%): Similar overall change size
+ * - Density similarity (15%): Similar change patterns (solid vs scattered)
+ * - Intensity similarity (10%): Similar change intensity
+ *
+ * @param fp1 - First fingerprint to compare
+ * @param fp2 - Second fingerprint to compare
+ * @returns Similarity score from 0.0 to 1.0
+ *
+ * @example
+ * ```typescript
+ * const similarity = fingerprintSimilaritySync(fp1, fp2);
+ * if (similarity > 0.8) {
+ *   console.log('These diffs are likely the same change!');
+ * }
+ * ```
+ */
+export function fingerprintSimilaritySync(fp1: DiffFingerprint, fp2: DiffFingerprint): number;
+
+/**
+ * Get the coarse hash of a fingerprint (synchronous)
+ *
+ * Returns a hex string that can be used for fast exact-match grouping.
+ * Diffs with the same coarse hash are very likely to be the same visual change.
+ *
+ * The hash combines:
+ * - Zone mask (16 bits): Which regions are affected
+ * - Diff magnitude (3 bits): Overall change size
+ * - Cluster count bucket (2 bits): Number of change regions
+ *
+ * @param fingerprint - The fingerprint to hash
+ * @returns A 16-character hex string
+ *
+ * @example
+ * ```typescript
+ * const hash = fingerprintHashSync(fingerprint);
+ * console.log(`Hash: ${hash}`); // e.g., "0000000000000021"
+ *
+ * // Use for grouping
+ * const groups = new Map<string, DiffFingerprint[]>();
+ * for (const fp of fingerprints) {
+ *   const h = fingerprintHashSync(fp);
+ *   if (!groups.has(h)) groups.set(h, []);
+ *   groups.get(h)!.push(fp);
+ * }
+ * ```
+ */
+export function fingerprintHashSync(fingerprint: DiffFingerprint): string;

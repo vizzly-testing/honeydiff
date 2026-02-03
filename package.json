@@ -1,6 +1,6 @@
 {
   "name": "@vizzly-testing/honeydiff",
-  "version": "0.8.1",
+  "version": "0.10.0",
   "description": "High-performance image diffing for Node.js - Native bindings to Honeydiff Rust library",
   "type": "module",
   "main": "index.js",
@@ -48,6 +48,7 @@
     "index.d.ts",
     "load-platform.cjs",
     "platforms/*.node",
+    "examples/",
     "README.md",
     "CHANGELOG.md"
   ],

@@ -66,3 +66,8 @@ export const analyzeWcagForCvdSync = addon.analyzeWcagForCvdSync;
 export const analyzeWcagAllCvd = addon.analyzeWcagAllCvd;
 export const analyzeWcagAllCvdSync = addon.analyzeWcagAllCvdSync;
 export const getColorBlindnessTypes = addon.getColorBlindnessTypes;
+
+// Diff Fingerprint API
+export const computeFingerprintSync = addon.computeFingerprintSync;
+export const fingerprintSimilaritySync = addon.fingerprintSimilaritySync;
+export const fingerprintHashSync = addon.fingerprintHashSync;

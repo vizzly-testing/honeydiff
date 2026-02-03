@@ -188,10 +188,39 @@ if (result.diffClusters) {
 | 2 | Default - filters single isolated pixels as rendering noise |
 | 3+ | More permissive - only larger clusters detected |
 
-### 6. Perceptual Similarity (SSIM)
+**Cluster Merging for Text Regions:**
+
+Text changes often fragment into many small clusters (one per character). Enable cluster merging to consolidate them into logical regions:
+
+```javascript
+// Simple: enable with sensible defaults
+const result = await compare('img1.png', 'img2.png', {
+  includeClusters: true,
+  clusterMerge: true  // Merge nearby clusters (great for text)
+});
+
+// Advanced: tune the merging behavior
+const result = await compare('img1.png', 'img2.png', {
+  includeClusters: true,
+  clusterMerge: {
+    horizontalDistance: 15,  // Max gap between clusters to merge (pixels)
+    yBandTolerance: 5,       // Vertical tolerance for "same line"
+    maxHeightRatio: 2.0,     // Prevent merging very different sized clusters
+    maxWidthRatio: 3.0
+  }
+});
+
+// Before: "2024-01-01" detected as 59 clusters (one per character/gap)
+// After:  "2024-01-01" detected as 1-2 logical regions
+```
+
+Uses SWT-inspired heuristics from text detection research (Epshtein et al. 2010).
+
+### 6. Perceptual Similarity (SSIM & GMSD)
 
 Beyond pixel counting - measure structural similarity from a human perception perspective.
 
+**SSIM (Structural Similarity Index)** - Overall perceptual similarity:
 ```javascript
 const result = await compare('img1.png', 'img2.png', {
   includeSSIM: true  // Note: Can be slow on large images
@@ -200,12 +229,32 @@ const result = await compare('img1.png', 'img2.png', {
 if (result.perceptualScore !== null) {
   console.log(`SSIM: ${result.perceptualScore.toFixed(3)}`);
   // Output: SSIM: 0.923 (0.0 = different, 1.0 = identical)
+}
+```
 
-  if (result.perceptualScore > 0.95) {
-    console.log('Images are perceptually very similar');
+**GMSD (Gradient Magnitude Similarity Deviation)** - Fast edge-sensitive metric:
+```javascript
+const result = await compare('img1.png', 'img2.png', {
+  includeGMSD: true  // Very fast, great for detecting structural changes
+});
+
+if (result.gmsdScore !== null) {
+  console.log(`GMSD: ${result.gmsdScore.toFixed(4)}`);
+  // Output: GMSD: 0.0234 (0.0 = identical, higher = more different)
+
+  if (result.gmsdScore < 0.05) {
+    console.log('Edges are very similar');
   }
 }
 ```
+
+GMSD is ideal for catching:
+- Border thickness changes
+- Font weight shifts
+- Icon updates
+- Any edge/outline regressions
+
+**Reference:** Xue et al. 2014 - "Gradient Magnitude Similarity Deviation: A Highly Efficient Perceptual Image Quality Index"
 
 ### 7. Tolerance & Color Spaces
 
@@ -284,6 +333,69 @@ console.log(`Format: ${metadata.format}`);
 let metadata = await getImageMetadataFromFile('screenshot.png');
 console.log(`${metadata.width}x${metadata.height}, ${metadata.fileSizeBytes} bytes`);
 ```
+
+### 11. Diff Fingerprinting
+
+Group similar diffs across comparisons with fingerprinting. Perfect for batch-approving the same visual change that appears on multiple pages (e.g., header/footer updates).
+
+```javascript
+const { compare, computeFingerprintSync, fingerprintSimilaritySync, fingerprintHashSync } = require('@vizzly-testing/honeydiff');
+
+// Compare images with clustering enabled
+let result = await compare('baseline.png', 'current.png', {
+  includeClusters: true
+});
+
+// Compute fingerprint
+let fingerprint = computeFingerprintSync(result, 1920, 1080);
+
+if (fingerprint) {
+  console.log(`Hash: ${fingerprint.hash}`);
+  console.log(`Zones affected: ${fingerprint.zoneMask.toString(2).padStart(16, '0')}`);
+  console.log(`Cluster count: ${fingerprint.clusterCount}`);
+  console.log(`Magnitude: ${fingerprint.diffMagnitude}`);
+}
+```
+
+**Grouping similar diffs:**
+```javascript
+// Group diffs by hash for batch approval
+let groups = new Map();
+
+for (let comparison of comparisons) {
+  let fp = computeFingerprintSync(comparison.result, width, height);
+  if (fp) {
+    let hash = fingerprintHashSync(fp);
+    if (!groups.has(hash)) groups.set(hash, []);
+    groups.get(hash).push(comparison);
+  }
+}
+
+// Find groups with multiple similar diffs
+for (let [hash, items] of groups) {
+  if (items.length > 1) {
+    console.log(`Found ${items.length} similar diffs with hash ${hash}`);
+  }
+}
+```
+
+**Similarity scoring:**
+```javascript
+// Compare two fingerprints (0.0 = different, 1.0 = identical)
+let similarity = fingerprintSimilaritySync(fp1, fp2);
+
+if (similarity > 0.8) {
+  console.log('These diffs are likely the same visual change');
+}
+```
+
+**Fingerprint properties:**
+- `clusterCount` - Number of distinct change regions
+- `clusterPositions` - Normalized positions (0.0-1.0)
+- `clusterSizes` - Relative sizes (area ratio)
+- `zoneMask` - 4x4 grid (16 zones) showing affected regions
+- `diffMagnitude` - Bucketed size: `tiny`, `small`, `medium`, `large`, `massive`
+- `hash` - Pre-computed coarse hash for fast grouping
 
 ## Accessibility Features
 
@@ -470,6 +582,20 @@ Synchronous metadata retrieval from buffer.
 
 Synchronous metadata retrieval from file.
 
+### Diff Fingerprint Functions (Sync only)
+
+**`computeFingerprintSync(diffResult, width, height): DiffFingerprint | null`**
+
+Compute a fingerprint from a diff result. Requires `includeClusters: true` in compare options. Returns null if no clusters.
+
+**`fingerprintSimilaritySync(fp1, fp2): number`**
+
+Compare two fingerprints. Returns 0.0 (different) to 1.0 (identical).
+
+**`fingerprintHashSync(fingerprint): string`**
+
+Get coarse hash for fast grouping. Returns 16-char hex string.
+
 ### Input Types
 
 All functions accept:
@@ -481,22 +607,22 @@ All functions accept:
 ```typescript
 interface CompareOptions {
   // Basic options
-  pixelTolerance?: number;              // 0-255, ignore diffs below threshold (default: 0)
-  colorThreshold?: number;              // 0.0-1.0, YIQ mode threshold (default: 0.0 = RGB)
+  threshold?: number;                   // CIEDE2000 Delta E threshold (default: 2.0)
   antialiasing?: boolean;               // Ignore AA artifacts (default: true)
-  ignoreColors?: boolean;               // Brightness only (default: false)
   maxDiffs?: number;                    // Stop after N diffs (default: unlimited)
 
   // Analysis options
   includeDiffPixels?: boolean;          // List all diff pixels (memory intensive, default: false)
   includeClusters?: boolean;            // Spatial clustering (default: false)
   includeSSIM?: boolean;                // SSIM perceptual score (slow, default: false)
+  includeGMSD?: boolean;                // GMSD edge similarity (fast, default: false)
   minClusterSize?: number;              // Filter clusters smaller than this (default: 2)
-
-  // Accessibility options
-  includeAccessibilityData?: boolean;   // RGB, luminance, WCAG (default: false)
-  checkColorBlindness?: boolean;        // Color blindness simulation (default: false)
-  colorBlindnessThreshold?: number;     // Visibility threshold 0-255 (default: 30.0)
+  clusterMerge?: boolean | {            // Merge nearby clusters (default: false)
+    horizontalDistance?: number;        // Max horizontal gap to merge (default: 15)
+    yBandTolerance?: number;            // Vertical "same line" tolerance (default: 5)
+    maxHeightRatio?: number;            // Max height ratio to merge (default: 2.0)
+    maxWidthRatio?: number;             // Max width ratio to merge (default: 3.0)
+  };
 
   // Output options
   diffPath?: string;                    // Save diff image path
@@ -529,7 +655,8 @@ interface DiffResult {
   diffPixelsList: DiffPixel[] | null;   // Null unless includeDiffPixels enabled
   diffClusters: DiffCluster[] | null;   // Null unless includeClusters enabled
   intensityStats: IntensityStats | null; // Null unless includeDiffPixels enabled
-  perceptualScore: number | null;       // 0.0-1.0, null unless includeSSIM enabled
+  perceptualScore: number | null;       // SSIM 0.0-1.0, null unless includeSSIM enabled
+  gmsdScore: number | null;             // GMSD 0.0+, null unless includeGMSD enabled
 }
 ```
 
