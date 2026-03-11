@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2026-03-11
+
+## What's Changed
+
+### Fixed
+- Variable-height image comparisons now correctly return diff clusters for the height-difference region. Previously, when a baseline and current screenshot had different heights, `diffClusters` was empty even though `isDifferent` was `true` and `diffPixels` was non-zero — meaning callers had no bounding box to highlight. A synthetic cluster covering the full-width region at the height boundary is now included in `diffClusters`.
+
+**Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.10.0...v0.10.1
+
+## [0.10.0] - 2026-02-03
+
+## What's Changed
+
+### Added
+- **GMSD (Gradient Magnitude Similarity Deviation)** - New `includeGMSD` option for fast, edge-sensitive perceptual comparison
+  - Returns `gmsdScore` in results (0.0 = identical, higher = more different)
+  - Very fast compared to SSIM, ideal for detecting border/outline changes
+  - Based on Xue et al. 2014 research paper
+  - **Note:** GMSD requires images with identical dimensions. For variable-height comparisons, `gmsdScore` will be `null`
+- **Cluster Merging** - New `clusterMerge` option to consolidate fragmented text regions
+  - Simple API: `clusterMerge: true` enables with sensible defaults
+  - Advanced API: Pass an object with `horizontalDistance`, `yBandTolerance`, `maxHeightRatio`, `maxWidthRatio`
+  - Solves the "59 clusters for one date string" problem by intelligently merging nearby character-level changes into logical text regions
+  - Uses SWT-inspired heuristics (Epshtein et al. 2010) for horizontal-biased text detection
+
+**Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.9.0...v0.10.0
+
+## [Unreleased]
+
+### Added
+- **GMSD (Gradient Magnitude Similarity Deviation)** - New `includeGMSD` option for fast, edge-sensitive perceptual comparison
+  - Returns `gmsdScore` in results (0.0 = identical, higher = more different)
+  - Very fast compared to SSIM, ideal for detecting border/outline changes
+  - Based on Xue et al. 2014 research paper
+- **Cluster Merging** - New `clusterMerge` option to consolidate fragmented text regions
+  - Simple API: `clusterMerge: true` enables with sensible defaults
+  - Advanced API: Pass an object with `horizontalDistance`, `yBandTolerance`, `maxHeightRatio`, `maxWidthRatio`
+  - Solves the "59 clusters for one date string" problem
+  - Uses SWT-inspired heuristics (Epshtein et al. 2010)
+
 ## [0.9.0] - 2026-01-26
 
 ## What's Changed
