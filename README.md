@@ -14,12 +14,16 @@ Requires Node.js 22+. Pre-built binaries included for macOS (ARM64), Linux (x64/
 
 ## Why Honeydiff?
 
-- **6x faster than odiff** - Processes 230M+ pixels/sec with multi-core parallelization
+- **Fast where it matters** - Full HD default comparisons in ~18.9ms core time, with exact-mode fast paths for strict checks
 - **Smart anti-aliasing** - Filters out rendering artifacts, not actual changes
 - **Accessibility built-in** - WCAG contrast analysis for catching accessibility violations
 - **Flexible inputs** - Works with file paths or Buffers
 - **Full TypeScript support** - Complete type definitions included
 - **Advanced analytics** - SSIM perceptual scoring, spatial clustering, intensity stats
+
+Most image diff tools stop at basic pixel or YIQ-style color comparison. Honeydiff layers in the pieces visual regression systems usually need after the first diff: perceptual Delta E thresholds, conservative anti-aliasing detection, variable-height screenshots, spatial clustering, SSIM/GMSD, diff fingerprints, WCAG contrast checks, and color-blindness simulation.
+
+That broader feature set can cost more when you enable everything at once. The strength is that you can choose the right level of analysis for the job: exact fast paths for strict gates, default perceptual comparison for day-to-day visual checks, and richer diagnostics when a diff needs triage.
 
 Built for production visual regression testing at scale.
 
@@ -98,10 +102,10 @@ test('button hover state', async () => {
 
 ### 1. Performance at Scale
 
-Process 230M pixels/second with automatic multi-core parallelization. Perfect for CI/CD pipelines.
+Honeydiff uses multi-core parallelization, RGB equality short-circuits, and exact-mode fast paths to keep visual checks moving in CI.
 
 ```javascript
-// 18.3M pixel screenshot compared in ~79ms
+// Full HD default comparison benchmarks at ~18.9ms core time on Apple Silicon
 const result = await compare('full-page-baseline.png', 'full-page-current.png');
 ```
 
@@ -667,19 +671,21 @@ See [index.d.ts](./index.d.ts) for complete type definitions.
 
 ## Performance
 
-Benchmarked on 18.3M pixel screenshots (750 x 24,162 px):
+Benchmarked on Apple Silicon with Honeydiff v0.10.3. Core timings use preloaded images and measure comparison work without PNG decode, process startup, or file output cost.
 
-| Operation | Time | Throughput |
-|-----------|------|------------|
-| Basic CIEDE2000 comparison | ~79ms | 231.8M pixels/sec |
-| With anti-aliasing | ~88ms | 208M pixels/sec |
-| With artifacts (diff/mask/overlay) | ~432ms | 42.4M pixels/sec |
+| Scenario | Mode | Time | Throughput |
+|----------|------|------|------------|
+| Full HD synthetic (1920×1080) | Default CIEDE2000 + AA | ~18.9ms | ~110M px/sec |
+| 4K synthetic (3840×2160) | Default CIEDE2000 + AA | ~77.7ms | ~107M px/sec |
+| Vizzly fixture (826×3070) | Default CIEDE2000 + AA | ~3.8ms | ~666M px/sec |
+| Tall screenshot fixture (750×24,412) | Default CIEDE2000 + AA | ~210.8ms | ~87M px/sec |
+| Tall screenshot fixture (750×24,412) | Exact, no AA, no cluster filter | ~4.9ms | ~3.7B px/sec |
 
-**vs odiff:** 6.0x faster (79ms vs 474ms)
+End-to-end CLI/tool timings include PNG decode and process startup. On the tall screenshot fixture, Honeydiff default CLI measured ~1.27s, Honeydiff exact/no-AA CLI measured ~0.42s, and odiff 4.2.1 measured ~0.41s with `--threshold 0.1`.
 
-Multi-core parallelization: 215-309% CPU utilization across cores.
+Those tool timings are useful, but they are not equivalent feature sets. The odiff and pixelmatch checks are intentionally basic comparison baselines. Honeydiff's default path is doing perceptual CIEDE2000 thresholding plus anti-aliasing classification, and Honeydiff can optionally add clustering, SSIM, GMSD, fingerprints, WCAG, and color-vision analysis. Use exact/no-AA mode when you want a strict low-level comparator; use the richer options when you want the diagnostics that basic diff tools do not provide.
 
-*Benchmarked on Apple M-series Mac.*
+Accuracy remains the priority: Honeydiff still uses CIEDE2000 thresholds by default, supports exact pixel matching with `threshold: 0`, and keeps conservative anti-aliasing detection for visual regression work.
 
 ## Common Patterns
 
