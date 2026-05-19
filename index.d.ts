@@ -187,7 +187,6 @@ export interface CompareOptions {
 
   /**
    * Include clustered groups of connected differing pixels
-   * Automatically enables includeDiffPixels if not already enabled
    * Clusters are sorted by size (largest first)
    * @default false
    */
@@ -316,6 +315,8 @@ export type ImageInput = string | Buffer;
 
 /**
  * Compare two images asynchronously (recommended)
+ * For large screenshots, prefer file path inputs. Buffer inputs are copied
+ * before native worker processing begins.
  *
  * @param img1 - First image (file path or Buffer)
  * @param img2 - Second image (file path or Buffer)

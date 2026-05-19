@@ -16,7 +16,7 @@ async function main() {
 
   // Compare using buffers
   let result = await honeydiff.compare(img1Buffer, img2Buffer, {
-    pixelTolerance: 0,
+    threshold: 0,
     includeSSIM: true,
   });
 

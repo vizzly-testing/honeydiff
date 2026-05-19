@@ -7,7 +7,7 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { analyzeWcagContrast, saveWcagOverlay } from '../index.js';
+import { analyzeWcagContrast, analyzeWcagContrastSync, saveWcagOverlay } from '../index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -102,8 +102,6 @@ async function main() {
   // Example 4: Synchronous API (for simple scripts)
   console.log('4. Using synchronous API...');
   try {
-    const { analyzeWcagContrastSync } = require('../index.js');
-
     let analysis = analyzeWcagContrastSync(
       path.join(__dirname, '../../../tests/fixtures/screenshots/vizzly-baseline.png'),
       {

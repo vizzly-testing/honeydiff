@@ -16,7 +16,7 @@ async function main(): Promise<void> {
 
   // Detailed comparison with full typing
   let options: CompareOptions = {
-    pixelTolerance: 5,
+    threshold: 2,
     antialiasing: true,
     includeSSIM: true,
     includeClusters: true,

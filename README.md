@@ -28,7 +28,7 @@ Built for production visual regression testing at scale.
 ### Basic Comparison
 
 ```javascript
-const { compare, quickCompare } = require('@vizzly-testing/honeydiff');
+import { compare, quickCompare } from '@vizzly-testing/honeydiff';
 
 // Quick boolean check - are these images different?
 if (await quickCompare('baseline.png', 'current.png')) {
@@ -37,7 +37,7 @@ if (await quickCompare('baseline.png', 'current.png')) {
 
 // Detailed comparison with tolerance
 const result = await compare('baseline.png', 'current.png', {
-  pixelTolerance: 10,  // Ignore tiny differences
+  threshold: 10,  // Ignore tiny differences
   includeSSIM: true    // Perceptual similarity score
 });
 
@@ -52,7 +52,7 @@ console.log(`SSIM: ${result.perceptualScore}`);
 import { compare, CompareOptions, DiffResult } from '@vizzly-testing/honeydiff';
 
 const options: CompareOptions = {
-  pixelTolerance: 5,
+  threshold: 5,
   includeSSIM: true,
   includeClusters: true
 };
@@ -79,14 +79,14 @@ test('homepage should match baseline', async () => {
 
 **Playwright**
 ```javascript
-const { compare } = require('@vizzly-testing/honeydiff');
+import { compare } from '@vizzly-testing/honeydiff';
 
 test('button hover state', async () => {
   await page.hover('[data-testid="submit-button"]');
   let screenshot = await page.screenshot();
 
   let result = await compare('baseline.png', screenshot, {
-    pixelTolerance: 10,
+    threshold: 10,
     diffPath: './artifacts/diff.png'
   });
 
@@ -256,26 +256,22 @@ GMSD is ideal for catching:
 
 **Reference:** Xue et al. 2014 - "Gradient Magnitude Similarity Deviation: A Highly Efficient Perceptual Image Quality Index"
 
-### 7. Tolerance & Color Spaces
+### 7. Thresholds
 
-**RGB Mode (default)** - Exact matching with pixel tolerance:
+Honeydiff uses CIEDE2000 Delta E thresholds for perceptual color difference:
+
 ```javascript
 const result = await compare('img1.png', 'img2.png', {
-  pixelTolerance: 10  // Ignore differences below threshold (0-255)
+  threshold: 2.0  // Default: ignores tiny perceptual variance
 });
 ```
 
-**YIQ Mode** - Perceptual color matching weighted for human vision:
-```javascript
-const result = await compare('img1.png', 'img2.png', {
-  colorThreshold: 0.1  // YIQ mode (odiff-compatible)
-});
-```
+Use exact mode when every changed pixel should count:
 
-**Brightness-only Mode** - Ignore color, compare structure:
 ```javascript
 const result = await compare('img1.png', 'img2.png', {
-  ignoreColors: true  // Compare brightness/luminance only
+  threshold: 0,
+  minClusterSize: 1
 });
 ```
 
@@ -283,13 +279,15 @@ const result = await compare('img1.png', 'img2.png', {
 
 Work with in-memory images from screenshots or API responses.
 
+For large screenshots, prefer file paths when possible. Buffer inputs are copied into the native worker before async processing begins, so path inputs put less pressure on the Node.js event loop and heap.
+
 ```javascript
-const fs = require('fs');
+import fs from 'node:fs';
 
 // Compare buffers directly
 let img1 = fs.readFileSync('image1.png');
 let img2 = fs.readFileSync('image2.png');
-let result = await compare(img1, img2, { pixelTolerance: 5 });
+let result = await compare(img1, img2, { threshold: 5 });
 
 // Mix paths and buffers
 let screenshot = await page.screenshot();  // Returns Buffer
@@ -301,7 +299,7 @@ let result = await compare('baseline.png', screenshot);
 Fast utility to get image dimensions without loading full image data.
 
 ```javascript
-const { getDimensions } = require('@vizzly-testing/honeydiff');
+import { getDimensions } from '@vizzly-testing/honeydiff';
 
 let dims = await getDimensions('screenshot.png');
 console.log(`Image is ${dims.width}x${dims.height} pixels`);
@@ -317,7 +315,7 @@ let dims = await getDimensions(buffer);
 Get image dimensions, file size, and format detection - useful for storage tracking and billing.
 
 ```javascript
-const { getImageMetadata, getImageMetadataFromFile } = require('@vizzly-testing/honeydiff');
+import { getImageMetadata, getImageMetadataFromFile } from '@vizzly-testing/honeydiff';
 
 // From buffer
 let buffer = fs.readFileSync('screenshot.png');
@@ -339,7 +337,12 @@ console.log(`${metadata.width}x${metadata.height}, ${metadata.fileSizeBytes} byt
 Group similar diffs across comparisons with fingerprinting. Perfect for batch-approving the same visual change that appears on multiple pages (e.g., header/footer updates).
 
 ```javascript
-const { compare, computeFingerprintSync, fingerprintSimilaritySync, fingerprintHashSync } = require('@vizzly-testing/honeydiff');
+import {
+  compare,
+  computeFingerprintSync,
+  fingerprintSimilaritySync,
+  fingerprintHashSync
+} from '@vizzly-testing/honeydiff';
 
 // Compare images with clustering enabled
 let result = await compare('baseline.png', 'current.png', {
@@ -406,7 +409,7 @@ Built-in WCAG color contrast analysis and color blindness simulation to catch ac
 Analyze entire images for WCAG color contrast violations - perfect for catching accessibility issues in screenshots and UI designs.
 
 ```javascript
-const { analyzeWcagContrast, saveWcagOverlay } = require('@vizzly-testing/honeydiff');
+import { analyzeWcagContrast, saveWcagOverlay } from '@vizzly-testing/honeydiff';
 
 // Analyze a screenshot for accessibility violations
 let analysis = await analyzeWcagContrast('screenshot.png', {
@@ -461,12 +464,12 @@ Simulate how your UI appears to users with color vision deficiencies. Uses the s
 - `achromatopsia` - Complete color blindness (grayscale only)
 
 ```javascript
-const {
+import {
   simulateColorBlindness,
   saveColorBlindnessSimulation,
   saveAllColorBlindnessSimulations,
   getColorBlindnessTypes
-} = require('@vizzly-testing/honeydiff');
+} from '@vizzly-testing/honeydiff';
 
 // Get CVD type information
 let types = getColorBlindnessTypes();
@@ -492,7 +495,7 @@ await saveAllColorBlindnessSimulations('dashboard.png', 'dashboard', 'png');
 Analyze contrast accessibility specifically for colorblind users. This catches issues that only appear when colors are perceived differently.
 
 ```javascript
-const { analyzeWcagForCvd, analyzeWcagAllCvd } = require('@vizzly-testing/honeydiff');
+import { analyzeWcagForCvd, analyzeWcagAllCvd } from '@vizzly-testing/honeydiff';
 
 // Analyze for a specific CVD type
 let analysis = await analyzeWcagForCvd('ui.png', 'deuteranopia', {
@@ -668,9 +671,8 @@ Benchmarked on 18.3M pixel screenshots (750 x 24,162 px):
 
 | Operation | Time | Throughput |
 |-----------|------|------------|
-| Basic RGB comparison | ~79ms | 231.8M pixels/sec |
+| Basic CIEDE2000 comparison | ~79ms | 231.8M pixels/sec |
 | With anti-aliasing | ~88ms | 208M pixels/sec |
-| YIQ color space | ~89ms | 206M pixels/sec |
 | With artifacts (diff/mask/overlay) | ~432ms | 42.4M pixels/sec |
 
 **vs odiff:** 6.0x faster (79ms vs 474ms)
@@ -684,11 +686,11 @@ Multi-core parallelization: 215-309% CPU utilization across cores.
 ### CI/CD Integration
 
 ```javascript
-const { compare } = require('@vizzly-testing/honeydiff');
+import { compare } from '@vizzly-testing/honeydiff';
 
 async function visualRegressionTest() {
   let result = await compare('baseline.png', 'current.png', {
-    pixelTolerance: 10,
+    threshold: 10,
     maxDiffs: 1000,  // Early exit for fast failure
     diffPath: process.env.CI ? './artifacts/diff.png' : undefined
   });
@@ -721,7 +723,7 @@ if (await quickCompare('baseline.png', 'current.png')) {
 
 ```javascript
 const result = await compare('baseline.png', 'current.png', {
-  pixelTolerance: 10
+  threshold: 10
 });
 
 if (result.diffPercentage > 5.0) {
@@ -753,7 +755,7 @@ if (result.diffPercentage > 5.0) {
 
 **Anti-aliasing too aggressive**
 - Set `antialiasing: false` for stricter pixel matching
-- Adjust `pixelTolerance` instead for controlled flexibility
+- Adjust `threshold` instead for controlled flexibility
 
 ## Use Cases
 
