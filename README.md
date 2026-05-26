@@ -11,6 +11,10 @@ the messy parts of visual testing: anti-aliased text, full-page screenshots,
 small rendering noise, diff artifacts, spatial clusters, perceptual metrics, and
 accessibility checks.
 
+<p align="center">
+  <img src="./assets/honeydiff-mascot-diff-drizzle.png" alt="Diff Drizzle, the Honeydiff Vizzly bear mascot" width="320" />
+</p>
+
 ```bash
 npm install @vizzly-testing/honeydiff
 ```
