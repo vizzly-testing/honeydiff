@@ -58,7 +58,7 @@ pieces visual regression systems usually need once screenshots get real:
 - Variable-height screenshot support for full-page comparisons.
 - Diff, mask, and overlay image artifacts for debugging failures.
 - Spatial clusters, intensity stats, SSIM, GMSD, and diff fingerprints.
-- WCAG contrast checks and color vision deficiency simulation.
+- WCAG contrast screening and color vision deficiency simulation.
 - Async and sync APIs with TypeScript definitions included.
 
 ## Common Use
@@ -132,7 +132,7 @@ console.log(result.perceptualScore);
 console.log(result.gmsdScore);
 ```
 
-### Check WCAG Contrast
+### Screenshot Contrast
 
 ```js
 import { analyzeWcagContrast } from '@vizzly-testing/honeydiff';
@@ -212,6 +212,10 @@ Honeydiff uses CIEDE2000 Delta E for perceptual color difference.
 The default is intentionally practical for browser and app screenshots: it
 filters tiny rendering variance while still catching meaningful UI changes.
 
+The cited algorithms and standards are listed in the repo's
+[References](../../docs/REFERENCES.md), including CIEDE2000, SSIM, MS-SSIM,
+GMSD, Brettel CVD simulation, sRGB, and WCAG contrast math.
+
 ## Performance
 
 Current local benchmark snapshots:
@@ -263,8 +267,8 @@ cargo build --release
 cargo test
 ```
 
-The package is ESM-first and ships native binaries through optional platform
-packages.
+The package is ESM-first and release packages include native binaries under
+`platforms/*.node`.
 
 ## License
 

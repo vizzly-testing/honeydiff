@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-06-20
+
+## What's Changed
+
+### Changed
+- SSIM, MS-SSIM, GMSD, and color vision deficiency simulation now align with the studies and standards cited in the docs. Metric values can change as a result.
+- Screenshot contrast analysis is described as screening, and the default reports every detected WCAG color-pair failure unless callers opt into a max-contrast filter.
+- Variable-height comparisons report GMSD for the overlapping image region.
+
+### Fixed
+- Anti-aliasing detection no longer hides flat full-surface color regressions.
+- Variable-height comparisons keep a height-difference cluster visible even when `maxDiffs` caps the reported output below `minClusterSize`.
+- `clusterMerge.maxHeightRatio` and `clusterMerge.maxWidthRatio` now reject `0`, while `maxContrastThreshold: 0` remains valid.
+- Release packaging keeps npm assets included with the published package.
+
+**Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.10.3...v0.11.0
+
 ## [0.10.3] - 2026-05-19
 
 ## What's Changed
@@ -45,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Returns `gmsdScore` in results (0.0 = identical, higher = more different)
   - Very fast compared to SSIM, ideal for detecting border/outline changes
   - Based on Xue et al. 2014 research paper
-  - **Note:** GMSD requires images with identical dimensions. For variable-height comparisons, `gmsdScore` will be `null`
+  - **Note:** In v0.10.0, GMSD required identical dimensions. Current releases calculate `gmsdScore` on the overlapping region for variable-height comparisons.
 - **Cluster Merging** - New `clusterMerge` option to consolidate fragmented text regions
   - Simple API: `clusterMerge: true` enables with sensible defaults
   - Advanced API: Pass an object with `horizontalDistance`, `yBandTolerance`, `maxHeightRatio`, `maxWidthRatio`
@@ -53,19 +70,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Uses SWT-inspired heuristics (Epshtein et al. 2010) for horizontal-biased text detection
 
 **Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.9.0...v0.10.0
-
-## [Unreleased]
-
-### Added
-- **GMSD (Gradient Magnitude Similarity Deviation)** - New `includeGMSD` option for fast, edge-sensitive perceptual comparison
-  - Returns `gmsdScore` in results (0.0 = identical, higher = more different)
-  - Very fast compared to SSIM, ideal for detecting border/outline changes
-  - Based on Xue et al. 2014 research paper
-- **Cluster Merging** - New `clusterMerge` option to consolidate fragmented text regions
-  - Simple API: `clusterMerge: true` enables with sensible defaults
-  - Advanced API: Pass an object with `horizontalDistance`, `yBandTolerance`, `maxHeightRatio`, `maxWidthRatio`
-  - Solves the "59 clusters for one date string" problem
-  - Uses SWT-inspired heuristics (Epshtein et al. 2010)
 
 ## [0.9.0] - 2026-01-26
 
@@ -249,8 +253,8 @@ const result = await compare('baseline.png', 'current.png', {
 ## [0.3.0] - 2025-11-15
 
 ### Added
-- WCAG accessibility testing API for analyzing color contrast compliance
-- `analyzeWcagContrast` / `analyzeWcagContrastSync` - Analyze images for WCAG color contrast violations
+- Screenshot contrast screening API using WCAG color-pair math
+- `analyzeWcagContrast` / `analyzeWcagContrastSync` - Screen images for detected contrast warnings
 - `saveWcagOverlay` / `saveWcagOverlaySync` - Generate visual overlays highlighting contrast issues
 
 **Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.2.1...v0.3.0

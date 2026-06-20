@@ -48,7 +48,7 @@ export const getImageMetadataSync = addon.getImageMetadataSync;
 export const getImageMetadataFromFile = addon.getImageMetadataFromFile;
 export const getImageMetadataFromFileSync = addon.getImageMetadataFromFileSync;
 
-// WCAG Accessibility API
+// Screenshot Contrast Screening API
 export const analyzeWcagContrast = addon.analyzeWcagContrast;
 export const analyzeWcagContrastSync = addon.analyzeWcagContrastSync;
 export const saveWcagOverlay = addon.saveWcagOverlay;

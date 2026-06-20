@@ -1,8 +1,8 @@
 /**
  * Color Vision Deficiency (CVD) Simulation Example
  *
- * Demonstrates how to simulate color blindness for images and run
- * accessibility analysis to ensure your UI works for all users.
+ * Demonstrates how to simulate color blindness for images and screen
+ * detected color boundaries with WCAG color-pair thresholds.
  */
 
 import fs from 'node:fs';
@@ -71,8 +71,8 @@ async function main() {
     console.error('   Error:', error.message, '\n');
   }
 
-  // Example 5: WCAG analysis for a specific CVD type
-  console.log('5. Analyzing WCAG contrast for deuteranopia users...');
+  // Example 5: WCAG threshold screening for a specific CVD type
+  console.log('5. Screening WCAG contrast thresholds for deuteranopia users...');
   try {
     let analysis = await analyzeWcagForCvd(testImage, 'deuteranopia', {
       checkAA: true,
@@ -82,10 +82,10 @@ async function main() {
 
     console.log(`   Total edges analyzed: ${analysis.totalEdges}`);
     console.log(`   AA normal text pass rate: ${analysis.aaNormalPassPercentage.toFixed(1)}%`);
-    console.log(`   Violations found: ${analysis.violations.length}`);
+    console.log(`   Warnings found: ${analysis.violations.length}`);
 
     if (analysis.violations.length > 0) {
-      console.log('\n   Top 3 violations:');
+      console.log('\n   Top 3 warnings:');
       for (let i = 0; i < Math.min(3, analysis.violations.length); i++) {
         let v = analysis.violations[i];
         console.log(`   ${i + 1}. Location: (${v.boundingBox.x}, ${v.boundingBox.y})`);
@@ -98,36 +98,36 @@ async function main() {
     console.error('   Error:', error.message, '\n');
   }
 
-  // Example 6: Comprehensive CVD accessibility report
-  console.log('6. Running comprehensive CVD accessibility analysis...');
+  // Example 6: Comprehensive CVD contrast report
+  console.log('6. Running comprehensive CVD contrast screening...');
   try {
     let report = await analyzeWcagAllCvd(testImage, {
       checkAA: true,
       checkAAA: true,
     });
 
-    console.log('\n   Accessibility Report:');
+    console.log('\n   Contrast Screening Report:');
     console.log('   ─────────────────────────────────────────────');
     console.log(
-      `   Normal Vision:  ${report.normalVision.violations.length} violations ` +
+      `   Normal Vision:  ${report.normalVision.violations.length} warnings ` +
         `(${report.normalVision.aaNormalPassPercentage.toFixed(1)}% pass)`
     );
     console.log(
-      `   Protanopia:     ${report.protanopia.violations.length} violations ` +
+      `   Protanopia:     ${report.protanopia.violations.length} warnings ` +
         `(${report.protanopia.aaNormalPassPercentage.toFixed(1)}% pass)`
     );
     console.log(
-      `   Deuteranopia:   ${report.deuteranopia.violations.length} violations ` +
+      `   Deuteranopia:   ${report.deuteranopia.violations.length} warnings ` +
         `(${report.deuteranopia.aaNormalPassPercentage.toFixed(1)}% pass)`
     );
     console.log(
-      `   Tritanopia:     ${report.tritanopia.violations.length} violations ` +
+      `   Tritanopia:     ${report.tritanopia.violations.length} warnings ` +
         `(${report.tritanopia.aaNormalPassPercentage.toFixed(1)}% pass)`
     );
     console.log('   ─────────────────────────────────────────────');
-    console.log(`   Total violations: ${report.totalViolations}`);
-    console.log(`   CVD-only violations: ~${report.cvdOnlyViolationCount}`);
-    console.log(`   Has any violations: ${report.hasAnyViolations}`);
+    console.log(`   Total warnings: ${report.totalViolations}`);
+    console.log(`   CVD-only warnings: ~${report.cvdOnlyViolationCount}`);
+    console.log(`   Has any warnings: ${report.hasAnyViolations}`);
     console.log();
   } catch (error) {
     console.error('   Error:', error.message, '\n');
@@ -157,10 +157,10 @@ async function main() {
    test('UI colors work for colorblind users', async () => {
      let screenshot = await page.screenshot();
 
-     // Check accessibility for all CVD types
+     // Screen contrast for all CVD types
      let report = await analyzeWcagAllCvd(screenshot, { checkAA: true });
 
-     // Assert no violations
+     // Assert no warnings
      expect(report.hasAnyViolations).toBe(false);
 
      // Or check specific CVD types

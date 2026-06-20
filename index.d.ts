@@ -206,8 +206,8 @@ export interface CompareOptions {
    * Useful for detecting border thickness changes, font weight shifts,
    * and icon updates.
    *
-   * **Note:** GMSD requires images with identical dimensions. For variable-height
-   * comparisons, `gmsdScore` will be `null`. Use SSIM for variable-height images.
+   * **Note:** For variable-height comparisons, GMSD is calculated on the
+   * overlapping region shared by both images.
    *
    * Reference: Xue et al. 2014 - "Gradient Magnitude Similarity Deviation:
    * A Highly Efficient Perceptual Image Quality Index"
@@ -541,11 +541,11 @@ export function getImageMetadataFromFile(path: string): Promise<ImageMetadata>;
 export function getImageMetadataFromFileSync(path: string): ImageMetadata;
 
 // ============================================================================
-// WCAG Accessibility API
+// Screenshot Contrast Screening API
 // ============================================================================
 
 /**
- * Options for WCAG color contrast analysis
+ * Options for screenshot contrast screening with WCAG color-pair math.
  */
 export interface WcagOptions {
   /**
@@ -564,38 +564,39 @@ export interface WcagOptions {
 
   /**
    * Maximum contrast threshold
-   * Regions with contrast above this are excluded (gradient filtering)
-   * @default 3.5
+   * Set above 0 to exclude regions with contrast above this ratio. 0 reports
+   * all detected failures.
+   * @default 0
    */
   maxContrastThreshold?: number;
 
   /**
-   * Check WCAG AA compliance (4.5:1 for normal text, 3.0:1 for large text)
+   * Check WCAG AA color-pair thresholds (4.5:1 for normal text, 3.0:1 for large text)
    * @default true
    */
   checkAA?: boolean;
 
   /**
-   * Check WCAG AAA compliance (7.0:1 for normal text, 4.5:1 for large text)
+   * Check WCAG AAA color-pair thresholds (7.0:1 for normal text, 4.5:1 for large text)
    * @default false
    */
   checkAAA?: boolean;
 }
 
 /**
- * A single WCAG color contrast violation region
+ * A single screenshot contrast warning region.
  */
 export interface ContrastViolation {
-  /** Bounding box containing this violation region */
+  /** Bounding box containing this warning region */
   boundingBox: BoundingBox;
 
-  /** List of pixel coordinates [x, y] in this violation */
+  /** List of pixel coordinates [x, y] in this warning region */
   pixels: [number, number][];
 
-  /** Center of mass [x, y] of the violation region */
+  /** Center of mass [x, y] of the warning region */
   centerOfMass: [number, number];
 
-  /** Number of pixels in this violation */
+  /** Number of pixels in this warning region */
   pixelCount: number;
 
   /** Foreground color [r, g, b, a] (0-255) */
@@ -633,7 +634,7 @@ export interface ContrastViolation {
 }
 
 /**
- * Complete WCAG accessibility analysis result
+ * Complete screenshot contrast screening result.
  */
 export interface WcagAnalysis {
   /** Total number of edges analyzed */
@@ -651,7 +652,7 @@ export interface WcagAnalysis {
   /** Number of edges passing WCAG AAA for large text */
   aaaLargePass: number;
 
-  /** List of contrast violations found */
+  /** List of contrast warning regions found */
   violations: ContrastViolation[];
 
   /** Percentage of edges passing WCAG AA for normal text (0.0-100.0) */
@@ -668,14 +669,16 @@ export interface WcagAnalysis {
 }
 
 /**
- * Analyze WCAG color contrast accessibility asynchronously (recommended)
+ * Screen screenshot contrast warnings asynchronously (recommended)
  *
- * Detects text/content edges in an image and checks if they meet WCAG contrast requirements.
- * This is useful for catching accessibility issues in screenshots and UI designs.
+ * Detects color boundaries in an image and measures each color pair with the
+ * WCAG contrast formula. Treat results as screening warnings, not full WCAG
+ * conformance, because screenshots do not expose text size, boldness, DOM
+ * foreground/background, compositing, or semantic roles.
  *
  * @param img - Image to analyze (file path or Buffer)
- * @param options - WCAG analysis options
- * @returns Promise resolving to detailed accessibility analysis
+ * @param options - Screenshot contrast screening options
+ * @returns Promise resolving to detailed screenshot contrast screening result
  *
  * @example
  * ```typescript
@@ -699,14 +702,14 @@ export interface WcagAnalysis {
 export function analyzeWcagContrast(img: ImageInput, options?: WcagOptions): Promise<WcagAnalysis>;
 
 /**
- * Analyze WCAG color contrast accessibility synchronously (blocks event loop)
+ * Screen screenshot contrast warnings synchronously (blocks event loop)
  *
  * Use this only when you need blocking behavior.
  * For most cases, prefer the async analyzeWcagContrast() function.
  *
  * @param img - Image to analyze (file path or Buffer)
- * @param options - WCAG analysis options
- * @returns Detailed accessibility analysis
+ * @param options - Screenshot contrast screening options
+ * @returns Detailed screenshot contrast screening result
  *
  * @example
  * ```typescript
@@ -745,7 +748,7 @@ export interface WcagOutputOptions {
  * Useful for visual debugging of accessibility issues.
  *
  * @param img - Original image (file path or Buffer)
- * @param analysis - WCAG analysis result from analyzeWcagContrast()
+ * @param analysis - Screenshot contrast screening result from analyzeWcagContrast()
  * @param outputPath - Path to save the overlay image
  * @param options - Output options
  * @returns Promise that resolves when the file is saved
@@ -778,7 +781,7 @@ export function saveWcagOverlay(
  * For most cases, prefer the async saveWcagOverlay() function.
  *
  * @param img - Original image (file path or Buffer)
- * @param analysis - WCAG analysis result from analyzeWcagContrastSync()
+ * @param analysis - Screenshot contrast screening result from analyzeWcagContrastSync()
  * @param outputPath - Path to save the overlay image
  * @param options - Output options
  *
@@ -835,22 +838,22 @@ export interface ColorBlindnessTypeInfo {
 }
 
 /**
- * Comprehensive WCAG analysis report for all color vision deficiency types.
+ * Comprehensive screenshot contrast screening report for all color vision deficiency types.
  *
- * Contains WCAG contrast analysis for normal vision and all three main types
+ * Contains contrast screening for normal vision and all three main types
  * of dichromatic color blindness (protanopia, deuteranopia, tritanopia).
  */
 export interface CvdWcagReport {
-  /** WCAG analysis for normal (typical) color vision */
+  /** Contrast screening for normal (typical) color vision */
   normalVision: WcagAnalysis;
 
-  /** WCAG analysis simulating protanopia (red-blind) */
+  /** Contrast screening simulating protanopia (red-blind) */
   protanopia: WcagAnalysis;
 
-  /** WCAG analysis simulating deuteranopia (green-blind) */
+  /** Contrast screening simulating deuteranopia (green-blind) */
   deuteranopia: WcagAnalysis;
 
-  /** WCAG analysis simulating tritanopia (blue-blind) */
+  /** Contrast screening simulating tritanopia (blue-blind) */
   tritanopia: WcagAnalysis;
 
   /** Whether any CVD type has violations */
@@ -870,8 +873,8 @@ export interface CvdWcagReport {
  * Simulate color blindness for an image asynchronously (recommended)
  *
  * Transforms the input image to show how it appears to someone with the
- * specified type of color vision deficiency. Uses the Brettel, Viénot & Mollon
- * 1997 algorithm, which is considered the gold standard for CVD simulation.
+ * specified type of color vision deficiency. Complete dichromacy uses the
+ * piecewise Brettel, Viénot & Mollon 1997 LMS projection model.
  *
  * @param img - Image to transform (file path or Buffer)
  * @param cvdType - Type of color blindness to simulate
@@ -1010,16 +1013,17 @@ export function saveAllColorBlindnessSimulationsSync(
 ): void;
 
 /**
- * Analyze WCAG contrast for a specific color blindness type asynchronously (recommended)
+ * Screen contrast for a specific color blindness type asynchronously (recommended)
  *
  * Simulates the image as seen by someone with the specified color vision
- * deficiency, then runs WCAG contrast analysis. This finds contrast violations
- * that only appear for colorblind users - critical for inclusive design.
+ * deficiency, then runs screenshot contrast screening with WCAG color-pair
+ * math. This finds detected color-pair warnings that only appear for
+ * colorblind users.
  *
  * @param img - Image to analyze (file path or Buffer)
  * @param cvdType - Type of color blindness to simulate
- * @param options - WCAG analysis options
- * @returns Promise resolving to WCAG analysis results for the simulated image
+ * @param options - Screenshot contrast screening options
+ * @returns Promise resolving to screening results for the simulated image
  *
  * @example
  * ```typescript
@@ -1042,14 +1046,14 @@ export function analyzeWcagForCvd(
 ): Promise<WcagAnalysis>;
 
 /**
- * Analyze WCAG contrast for a specific color blindness type synchronously (blocks event loop)
+ * Screen contrast for a specific color blindness type synchronously (blocks event loop)
  *
  * Use this only when you need blocking behavior.
  *
  * @param img - Image to analyze (file path or Buffer)
  * @param cvdType - Type of color blindness to simulate
- * @param options - WCAG analysis options
- * @returns WCAG analysis results for the simulated image
+ * @param options - Screenshot contrast screening options
+ * @returns Screening results for the simulated image
  *
  * @example
  * ```typescript
@@ -1064,15 +1068,14 @@ export function analyzeWcagForCvdSync(
 ): WcagAnalysis;
 
 /**
- * Analyze WCAG contrast for all CVD types asynchronously (recommended)
+ * Screen contrast for all CVD types asynchronously (recommended)
  *
- * Runs WCAG contrast analysis for normal vision and all three main types of
- * dichromatic color blindness. This provides a comprehensive accessibility
- * report covering the majority of color vision deficiencies.
+ * Runs screenshot contrast screening for normal vision and all three main
+ * types of dichromatic color blindness.
  *
  * @param img - Image to analyze (file path or Buffer)
- * @param options - WCAG analysis options (same options used for all analyses)
- * @returns Promise resolving to a report containing WCAG analysis for each vision type
+ * @param options - Screenshot contrast screening options (same options used for all analyses)
+ * @returns Promise resolving to a report containing screening results for each vision type
  *
  * @example
  * ```typescript
@@ -1081,11 +1084,11 @@ export function analyzeWcagForCvdSync(
  *   checkAAA: true
  * });
  *
- * console.log('Accessibility Report:');
- * console.log(`Normal vision violations: ${report.normalVision.violations.length}`);
- * console.log(`Protanopia violations: ${report.protanopia.violations.length}`);
- * console.log(`Deuteranopia violations: ${report.deuteranopia.violations.length}`);
- * console.log(`Tritanopia violations: ${report.tritanopia.violations.length}`);
+ * console.log('Contrast Screening Report:');
+ * console.log(`Normal vision warnings: ${report.normalVision.violations.length}`);
+ * console.log(`Protanopia warnings: ${report.protanopia.violations.length}`);
+ * console.log(`Deuteranopia warnings: ${report.deuteranopia.violations.length}`);
+ * console.log(`Tritanopia warnings: ${report.tritanopia.violations.length}`);
  *
  * if (report.hasAnyViolations) {
  *   console.log(`\nTotal issues found: ${report.totalViolations}`);
@@ -1096,20 +1099,20 @@ export function analyzeWcagForCvdSync(
 export function analyzeWcagAllCvd(img: ImageInput, options?: WcagOptions): Promise<CvdWcagReport>;
 
 /**
- * Analyze WCAG contrast for all CVD types synchronously (blocks event loop)
+ * Screen contrast for all CVD types synchronously (blocks event loop)
  *
  * Use this only when you need blocking behavior.
  *
  * @param img - Image to analyze (file path or Buffer)
- * @param options - WCAG analysis options
- * @returns Report containing WCAG analysis for each vision type
+ * @param options - Screenshot contrast screening options
+ * @returns Report containing screening results for each vision type
  *
  * @example
  * ```typescript
  * const report = analyzeWcagAllCvdSync('ui.png');
  *
  * if (report.hasAnyViolations) {
- *   console.log('Accessibility issues detected!');
+ *   console.log('Contrast warnings detected!');
  * }
  * ```
  */

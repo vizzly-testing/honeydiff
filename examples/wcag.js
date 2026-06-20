@@ -1,8 +1,8 @@
 /**
- * WCAG Accessibility Testing Example
+ * Screenshot Contrast Screening Example
  *
- * Demonstrates how to analyze images for WCAG color contrast violations
- * and generate visual overlays showing problematic regions.
+ * Demonstrates how to screen screenshots with WCAG color-pair thresholds
+ * and generate visual overlays showing regions worth reviewing.
  */
 
 import path from 'node:path';
@@ -12,10 +12,10 @@ import { analyzeWcagContrast, analyzeWcagContrastSync, saveWcagOverlay } from '.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function main() {
-  console.log('=== WCAG Accessibility Testing Demo ===\n');
+  console.log('=== Screenshot Contrast Screening Demo ===\n');
 
-  // Example 1: Basic WCAG analysis
-  console.log('1. Running basic WCAG AA analysis...');
+  // Example 1: Basic contrast screening
+  console.log('1. Running basic WCAG AA color-pair screening...');
   try {
     let analysis = await analyzeWcagContrast(
       path.join(__dirname, '../../../tests/fixtures/screenshots/vizzly-baseline.png'),
@@ -30,10 +30,10 @@ async function main() {
     console.log(`   Total edges detected: ${analysis.totalEdges}`);
     console.log(`   AA normal text pass rate: ${analysis.aaNormalPassPercentage.toFixed(1)}%`);
     console.log(`   AA large text pass rate: ${analysis.aaLargePassPercentage.toFixed(1)}%`);
-    console.log(`   Violations found: ${analysis.violations.length}\n`);
+    console.log(`   Warnings found: ${analysis.violations.length}\n`);
 
     if (analysis.violations.length > 0) {
-      console.log('   Top 5 violations by size:');
+      console.log('   Top 5 warnings by size:');
       for (let i = 0; i < Math.min(5, analysis.violations.length); i++) {
         let violation = analysis.violations[i];
         console.log(
@@ -51,8 +51,8 @@ async function main() {
     console.error('   Error:', error.message);
   }
 
-  // Example 2: WCAG AAA analysis (stricter)
-  console.log('2. Running strict WCAG AAA analysis...');
+  // Example 2: WCAG AAA threshold screening (stricter)
+  console.log('2. Running strict WCAG AAA color-pair screening...');
   try {
     let analysis = await analyzeWcagContrast(
       path.join(__dirname, '../../../tests/fixtures/screenshots/vizzly-baseline.png'),
@@ -67,7 +67,7 @@ async function main() {
     console.log(`   Total edges detected: ${analysis.totalEdges}`);
     console.log(`   AAA normal text pass rate: ${analysis.aaaNormalPassPercentage.toFixed(1)}%`);
     console.log(`   AAA large text pass rate: ${analysis.aaaLargePassPercentage.toFixed(1)}%`);
-    console.log(`   AAA violations found: ${analysis.violations.length}\n`);
+    console.log(`   AAA warnings found: ${analysis.violations.length}\n`);
   } catch (error) {
     console.error('   Error:', error.message);
   }
@@ -83,7 +83,7 @@ async function main() {
       }
     );
 
-    let outputPath = path.join(__dirname, '../wcag-violations.png');
+    let outputPath = path.join(__dirname, '../wcag-warnings.png');
 
     await saveWcagOverlay(
       path.join(__dirname, '../../../tests/fixtures/screenshots/vizzly-baseline.png'),
@@ -111,14 +111,14 @@ async function main() {
     );
 
     console.log(`   Total edges: ${analysis.totalEdges}`);
-    console.log(`   Violations: ${analysis.violations.length}`);
+    console.log(`   Warnings: ${analysis.violations.length}`);
     console.log(`   Pass rate: ${analysis.aaNormalPassPercentage.toFixed(1)}%\n`);
   } catch (error) {
     console.error('   Error:', error.message);
   }
 
-  // Example 5: Detailed violation analysis
-  console.log('5. Analyzing violation details...');
+  // Example 5: Detailed warning analysis
+  console.log('5. Analyzing warning details...');
   try {
     let analysis = await analyzeWcagContrast(
       path.join(__dirname, '../../../tests/fixtures/screenshots/vizzly-baseline.png')
@@ -127,7 +127,7 @@ async function main() {
     if (analysis.violations.length > 0) {
       let violation = analysis.violations[0];
 
-      console.log('   First violation details:');
+      console.log('   First warning details:');
       console.log(`   - Location: (${violation.boundingBox.x}, ${violation.boundingBox.y})`);
       console.log(`   - Size: ${violation.boundingBox.width}x${violation.boundingBox.height}`);
       console.log(
@@ -141,7 +141,7 @@ async function main() {
         `   - Contrast ratio: ${violation.contrastRatio.toFixed(2)}:1 (${violation.minContrastRatio.toFixed(2)} - ${violation.maxContrastRatio.toFixed(2)})`
       );
       console.log(`   - Pixel count: ${violation.pixelCount}`);
-      console.log('   - WCAG Status:');
+      console.log('   - Detected threshold status:');
       console.log(`     AA Normal (4.5:1): ${violation.failsAaNormal ? '❌ FAIL' : '✓ PASS'}`);
       console.log(`     AA Large (3.0:1): ${violation.failsAaLarge ? '❌ FAIL' : '✓ PASS'}`);
       console.log(`     AAA Normal (7.0:1): ${violation.failsAaaNormal ? '❌ FAIL' : '✓ PASS'}`);
