@@ -222,11 +222,12 @@ Current local benchmark snapshots:
 
 | Scenario | Result |
 | --- | ---: |
-| Full HD default comparison | ~18.9ms |
-| Full HD exact comparison | ~2.8ms |
+| Full HD default comparison | ~31.6ms |
+| Full HD strict threshold with AA | ~103ms |
 | Identical image fast path | ~0.34ms |
-| 4K default comparison | ~76.9ms |
-| 4K exact comparison | ~14.0ms |
+| 4K default comparison | ~131ms |
+| Tall screenshot default comparison | ~192ms |
+| Tall screenshot exact/no-AA comparison | ~4.1ms |
 
 See [benchmarks/BENCHMARK_RESULTS.md](https://github.com/vizzly-testing/honeydiff/blob/main/benchmarks/BENCHMARK_RESULTS.md)
 for the current benchmark notes.

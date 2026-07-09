@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.11.1] - 2026-06-20
+
+## What's Changed
+
+### Fixed
+- Recovered hot-path performance after the 0.11.0 metric correctness update:
+  - Anti-aliasing now gathers sibling and edge context in one neighbor pass and skips Delta E work for exact RGB neighbor matches.
+  - Exact/no-AA count-only comparisons scan raw RGB rows directly.
+  - SSIM keeps the Gaussian-weighted 0.11 semantics while using a separable blur path for larger images and a direct small-image path where allocation overhead would dominate.
+- Local Criterion runs on Apple Silicon now show the tall screenshot fixture faster than 0.10.3 (`~192ms` default and `~4.1ms` exact/no-AA), while synthetic full-surface gradient stress cases remain slower because stricter AA checks do more work.
+- Documented the real benchmark tradeoff for the 0.11 metric changes instead of leaving the release note at “metric values can change.”
+
+**Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.11.0...v0.11.1
+
 ## [0.11.0] - 2026-06-20
 
 ## What's Changed
