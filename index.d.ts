@@ -89,7 +89,7 @@ export interface DiffResult {
   diffClusters: DiffCluster[] | null;
   /** Statistical metrics about difference intensities (null unless includeDiffPixels is enabled) */
   intensityStats: IntensityStats | null;
-  /** SSIM (Structural Similarity Index) perceptual score 0.0-1.0 (null unless includeSSIM is enabled) */
+  /** SSIM score, approximately -1.0 to 1.0 (null unless includeSSIM is enabled) */
   perceptualScore: number | null;
   /**
    * GMSD (Gradient Magnitude Similarity Deviation) score (null unless includeGMSD is enabled)
@@ -157,7 +157,7 @@ export interface CompareOptions {
    * Perceptual color difference threshold using CIEDE2000 (Delta E units)
    *
    * The CIEDE2000 standard provides intuitive, perceptually uniform thresholds:
-   * - 0.0 = Exact pixel matching (strictest)
+   * - 0.0 = No Delta E tolerance; AA and cluster filtering remain independent
    * - 1.0 = Just Noticeable Difference (JND) - barely perceptible to trained observers
    * - 2.0 = Recommended default - ignores sub-pixel rendering variance, catches real differences
    * - 3.0+ = Permissive - high tolerance for rendering variations
@@ -168,12 +168,17 @@ export interface CompareOptions {
 
   /**
    * Enable anti-aliasing detection to ignore AA differences
+   *
+   * Suppression requires a luminance ramp plus strict cross-image evidence that
+   * raster coverage moved to a neighboring pixel. Stable edge recolors remain differences.
    * @default true
    */
   antialiasing?: boolean;
 
   /**
    * Maximum number of differences to detect before stopping
+   * Capped comparisons classify from observed pixel evidence because early
+   * exit cannot determine whether a complete cluster meets minClusterSize.
    * @default undefined (unlimited)
    */
   maxDiffs?: number;
@@ -194,7 +199,10 @@ export interface CompareOptions {
 
   /**
    * Calculate SSIM (Structural Similarity Index) perceptual score
-   * WARNING: SSIM can be computationally expensive on large images
+   * This metric measures the source images independently of threshold and AA
+   * filtering. Transparent inputs are evaluated over black and white mattes,
+   * keeping the more conservative score.
+   * WARNING: SSIM can use substantial memory on large images.
    * @default false
    */
   includeSSIM?: boolean;
@@ -205,6 +213,8 @@ export interface CompareOptions {
    * GMSD is very fast and highly sensitive to edge/structural changes.
    * Useful for detecting border thickness changes, font weight shifts,
    * and icon updates.
+   * A score of 0 does not prove image identity; uniform changes can have no
+   * spatial variation in gradient degradation.
    *
    * **Note:** For variable-height comparisons, GMSD is calculated on the
    * overlapping region shared by both images.
@@ -223,9 +233,9 @@ export interface CompareOptions {
    * This helps ignore run-to-run rendering variance (scattered single pixels)
    * while still catching real visual changes (grouped pixel differences).
    *
-   * - 1 = Exact matching - any different pixel counts
+   * - 1 = Any surviving diff pixel counts
    * - 2 = Default - filters single isolated pixels as noise
-   * - 3+ = More permissive - only larger clusters detected
+   * - 3+ = More aggressive noise filtering
    *
    * When set to a value > 1, clustering is automatically enabled.
    * @default 2

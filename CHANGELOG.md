@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-19
+
+### Fixed
+- Prevented AA filtering from hiding thin border and divider recoloring by
+  requiring cross-image raster displacement.
+- Compared rendered RGBA appearance, including opacity changes, while ignoring
+  hidden RGB under full transparency.
+- Kept zero-threshold results and artifact masks consistent for low-alpha RGBA.
+- Kept optional metrics independent from threshold and AA-filtered diff counts.
+- Corrected small-image SSIM/MS-SSIM, GMSD boundaries, and exact artifact masks.
+- Matched the authors' MS-SSIM pyramid, pooling, and direct weight semantics,
+  plus GMSD's exact normalized constant and sample-deviation pooling.
+- Made capped comparisons classify from observed pixel evidence regardless of
+  cluster policy, preventing early exit from reporting false identity.
+- Kept diff pixels and clusters null unless callers request them.
+- Added Node boundary coverage for transparency, evidence privacy, exact RGBA,
+  and metric independence.
+
+**Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.11.1...v0.12.0
+
 ## [0.11.1] - 2026-06-20
 
 ## What's Changed

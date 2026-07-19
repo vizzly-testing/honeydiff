@@ -53,8 +53,11 @@ Most image diff packages stop at basic pixel comparison. Honeydiff gives you the
 pieces visual regression systems usually need once screenshots get real:
 
 - CIEDE2000 perceptual color thresholds, with `2.0` as the default.
-- Strict exact matching when you set `threshold: 0`.
+- Zero perceptual tolerance with `threshold: 0`; disable AA and set
+  `minClusterSize: 1` for strict rendered-pixel matching.
 - Conservative anti-aliasing detection for font and sub-pixel rendering noise.
+- RGBA-aware comparison that detects opacity changes and ignores RGB payload
+  hidden behind full transparency.
 - Variable-height screenshot support for full-page comparisons.
 - Diff, mask, and overlay image artifacts for debugging failures.
 - Spatial clusters, intensity stats, SSIM, GMSD, and diff fingerprints.
@@ -162,9 +165,9 @@ await saveColorBlindnessSimulation(
 
 | Option | Default | Notes |
 | --- | --- | --- |
-| `threshold` | `2.0` | CIEDE2000 Delta E threshold. Use `0` for exact matching. |
+| `threshold` | `2.0` | CIEDE2000 Delta E threshold. Use `0` for zero perceptual tolerance. |
 | `antialiasing` | `true` | Ignore likely anti-aliased pixels. |
-| `maxDiffs` | unlimited | Stop after a maximum number of differing pixels. |
+| `maxDiffs` | unlimited | Stop after a maximum number of differing pixels. Capped results classify from the pixels observed before early exit, without cluster filtering. |
 | `includeDiffPixels` | `false` | Return individual differing pixel positions and intensities. |
 | `includeClusters` | `false` | Return connected regions of visual change. |
 | `minClusterSize` | `2` | Filter tiny isolated clusters as noise. |
@@ -204,7 +207,7 @@ Honeydiff uses CIEDE2000 Delta E for perceptual color difference.
 
 | Threshold | Meaning |
 | --- | --- |
-| `0` | Exact pixel matching. |
+| `0` | No Delta E tolerance; AA and cluster filtering still apply if enabled. |
 | `1` | Barely noticeable color changes. |
 | `2` | Recommended default for UI screenshots. |
 | `3+` | More tolerant of rendering differences. |
@@ -213,7 +216,7 @@ The default is intentionally practical for browser and app screenshots: it
 filters tiny rendering variance while still catching meaningful UI changes.
 
 The cited algorithms and standards are listed in the repo's
-[References](../../docs/REFERENCES.md), including CIEDE2000, SSIM, MS-SSIM,
+[References](https://github.com/vizzly-testing/honeydiff/blob/main/docs/REFERENCES.md), including CIEDE2000, SSIM, MS-SSIM,
 GMSD, Brettel CVD simulation, sRGB, and WCAG contrast math.
 
 ## Performance
@@ -222,12 +225,12 @@ Current local benchmark snapshots:
 
 | Scenario | Result |
 | --- | ---: |
-| Full HD default comparison | ~31.6ms |
-| Full HD strict threshold with AA | ~103ms |
-| Identical image fast path | ~0.34ms |
-| 4K default comparison | ~131ms |
-| Tall screenshot default comparison | ~192ms |
-| Tall screenshot exact/no-AA comparison | ~4.1ms |
+| Vizzly screenshot default comparison | ~2.81ms |
+| Vizzly screenshot strict/no-AA comparison | ~2.18ms |
+| Tall screenshot default comparison | ~147ms |
+| Tall screenshot strict/no-AA comparison | ~4.34ms |
+| 1080p isolated SSIM | ~14.7ms |
+| 1080p isolated GMSD | ~10.9ms |
 
 See [benchmarks/BENCHMARK_RESULTS.md](https://github.com/vizzly-testing/honeydiff/blob/main/benchmarks/BENCHMARK_RESULTS.md)
 for the current benchmark notes.
