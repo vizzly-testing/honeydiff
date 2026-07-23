@@ -187,6 +187,9 @@ interface DiffResult {
   diffPercentage: number;
   totalPixels: number;
   diffPixels: number;
+  effectiveDiffPixels: number;
+  effectiveMaskComplete: boolean;
+  maskSemanticsVersion: string;
   aaPixelsIgnored: number;
   aaPercentage: number;
   boundingBox: BoundingBox | null;
@@ -198,6 +201,16 @@ interface DiffResult {
   gmsdScore: number | null;
 }
 ```
+
+`diffPixels` is the raw post-threshold/anti-aliasing count.
+`effectiveDiffPixels` is the retained count represented by the binary mask after
+`minClusterSize` filtering. It always matches the mask's nontransparent pixel
+count. If `effectiveMaskComplete` is `false`, `maxDiffs` stopped the scan early;
+the partial mask is useful for diagnostics but not complete spatial proof.
+Requesting `diffPixelsList` or `diffClusters` never changes that retained result.
+
+The package also exports `version` from its installed manifest and
+`maskSemanticsVersion` from the native comparison engine.
 
 See [index.d.ts](./index.d.ts) for the full API surface.
 

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-07-23
+
+### Added
+- Exposed `effectiveDiffPixels`, `effectiveMaskComplete`,
+  `maskSemanticsVersion`, and the installed package `version` for auditable
+  mask consumers.
+
+### Fixed
+- Kept binary mask alpha opaque even when a transparent display diff color is
+  requested.
+- Kept requested pixel and cluster diagnostics from changing the effective mask
+  or variable-height classification.
+
+**Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.12.0...v0.13.0
+
 ## [0.12.0] - 2026-07-19
 
 ### Fixed

@@ -2,7 +2,7 @@
  * @vizzly-testing/honeydiff - Native Node.js bindings for Honeydiff
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,7 @@ const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let addon;
+let packageMetadata = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 // Try to load the native addon:
 // 1. First try load-platform.cjs (exists in published npm package with multi-platform binaries)
@@ -41,6 +42,8 @@ export const compareSync = addon.compareSync;
 export const quickCompareSync = addon.quickCompareSync;
 export const getDimensions = addon.getDimensions;
 export const getDimensionsSync = addon.getDimensionsSync;
+export const maskSemanticsVersion = addon.maskSemanticsVersion;
+export const version = packageMetadata.version;
 
 // Image Metadata API
 export const getImageMetadata = addon.getImageMetadata;

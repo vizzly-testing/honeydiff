@@ -75,6 +75,12 @@ export interface DiffResult {
    * Note: This may be > 0 even when isDifferent is false if small clusters were filtered as noise
    */
   diffPixels: number;
+  /** Number of retained pixels represented by the effective diff mask */
+  effectiveDiffPixels: number;
+  /** False when maxDiffs stopped the scan before the full image was evaluated */
+  effectiveMaskComplete: boolean;
+  /** Version of the pixel-retention semantics used by the effective mask */
+  maskSemanticsVersion: string;
   /** Number of pixels ignored due to anti-aliasing detection */
   aaPixelsIgnored: number;
   /** Percentage of pixels ignored as anti-aliasing (0.0 - 100.0) */
@@ -98,6 +104,12 @@ export interface DiffResult {
    */
   gmsdScore: number | null;
 }
+
+/** Installed @vizzly-testing/honeydiff package version */
+export const version: string;
+
+/** Native effective-mask semantics implemented by this package */
+export const maskSemanticsVersion: string;
 
 // ============================================================================
 // Options
