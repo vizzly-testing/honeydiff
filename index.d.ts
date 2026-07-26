@@ -60,6 +60,36 @@ export interface DiffCluster {
   boundingBox: BoundingBox;
 }
 
+export interface DiffMaskComponent {
+  /** Number of retained pixels in this exact 8-connected component */
+  pixelCount: number;
+  /** Bitmap-pixel bounds around the component */
+  boundingBox: BoundingBox;
+}
+
+export interface DiffMaskEvidence {
+  /** Version of this evidence result shape */
+  contractVersion: string;
+  /** Native identity of normalized options that can change retained pixels */
+  analysisContractHash: string;
+  /** Version of Honeydiff's retained-pixel semantics */
+  semanticsVersion: string;
+  /** Version of the connected-component semantics */
+  componentSemanticsVersion: string;
+  /** Bitmap coordinate-space version */
+  coordinateSpaceVersion: string;
+  /** Diff-mask width in bitmap pixels */
+  width: number;
+  /** Diff-mask height in bitmap pixels */
+  height: number;
+  /** Number of retained pixels represented by the mask */
+  pixelCount: number;
+  /** False when maxDiffs stopped the comparison early */
+  complete: boolean;
+  /** Deterministically ordered exact connected components */
+  components: DiffMaskComponent[];
+}
+
 export interface DiffResult {
   /**
    * Whether the images are different based on the comparison threshold
@@ -75,12 +105,14 @@ export interface DiffResult {
    * Note: This may be > 0 even when isDifferent is false if small clusters were filtered as noise
    */
   diffPixels: number;
-  /** Number of retained pixels represented by the effective diff mask */
-  effectiveDiffPixels: number;
+  /** Number of retained pixels represented by the diff mask */
+  diffMaskPixels: number;
   /** False when maxDiffs stopped the scan before the full image was evaluated */
-  effectiveMaskComplete: boolean;
-  /** Version of the pixel-retention semantics used by the effective mask */
+  diffMaskComplete: boolean;
+  /** Version of the pixel-retention semantics used by the diff mask */
   maskSemanticsVersion: string;
+  /** Authoritative diff-mask evidence (null unless includeDiffMaskEvidence is enabled) */
+  diffMaskEvidence: DiffMaskEvidence | null;
   /** Number of pixels ignored due to anti-aliasing detection */
   aaPixelsIgnored: number;
   /** Percentage of pixels ignored as anti-aliasing (0.0 - 100.0) */
@@ -108,7 +140,7 @@ export interface DiffResult {
 /** Installed @vizzly-testing/honeydiff package version */
 export const version: string;
 
-/** Native effective-mask semantics implemented by this package */
+/** Native diff-mask semantics implemented by this package */
 export const maskSemanticsVersion: string;
 
 // ============================================================================
@@ -208,6 +240,13 @@ export interface CompareOptions {
    * @default false
    */
   includeClusters?: boolean;
+
+  /**
+   * Include authoritative diff-mask dimensions, identity, and exact
+   * connected-component facts.
+   * @default false
+   */
+  includeDiffMaskEvidence?: boolean;
 
   /**
    * Calculate SSIM (Structural Similarity Index) perceptual score

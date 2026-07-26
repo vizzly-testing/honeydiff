@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-07-24
+
+### Added
+- Added opt-in, versioned `diffMaskEvidence` with a native analysis
+  identity, bitmap dimensions, completeness, and exact 8-connected component
+  facts derived from the retained pixels used by mask artifacts.
+
+### Changed
+- Named retained mask facts consistently around Honeydiff's diff-mask artifact:
+  `diffMaskPixels`, `diffMaskComplete`, `diffMaskEvidence`, and
+  `includeDiffMaskEvidence`.
+- Diff-mask artifact generation reuses requested native evidence instead
+  of repeating the comparison to recover filtered coordinates.
+
+**Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.13.1...v0.14.0
+
 ## [0.13.1] - 2026-07-23
 
 ### Changed
@@ -18,14 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.13.0] - 2026-07-23
 
 ### Added
-- Exposed `effectiveDiffPixels`, `effectiveMaskComplete`,
-  `maskSemanticsVersion`, and the installed package `version` for auditable
-  mask consumers.
+- Exposed retained mask pixel count, completeness, semantics version, and the
+  installed package version for auditable mask consumers.
 
 ### Fixed
 - Kept binary mask alpha opaque even when a transparent display diff color is
   requested.
-- Kept requested pixel and cluster diagnostics from changing the effective mask
+- Kept requested pixel and cluster diagnostics from changing the diff mask
   or variable-height classification.
 
 **Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.12.0...v0.13.0
