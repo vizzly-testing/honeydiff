@@ -154,6 +154,23 @@ console.log(result.perceptualScore);
 console.log(result.gmsdScore);
 ```
 
+### Align One Added Or Removed Block
+
+```js
+let result = await compare('baseline.png', 'current.png', {
+  alignHeightChanges: true,
+  maskPath: 'artifacts/mask.png',
+});
+```
+
+This opt-in handles one exact added or removed block of rows, such as a banner,
+while keeping separate changes below it visible. Ambiguous matches,
+bottom-only growth, and comparisons using `maxDiffs` use the normal comparison.
+It does not handle multiple blocks, partial-width movement, or fuzzy matching.
+An accepted comparison temporarily uses one additional RGBA frame. SSIM and
+GMSD compare the unaligned overlapping portions, and the side-by-side overlay
+uses the original images.
+
 ### Screenshot Contrast
 
 ```js
@@ -186,6 +203,7 @@ await saveColorBlindnessSimulation(
 | --- | --- | --- |
 | `threshold` | `2.0` | CIEDE2000 Delta E threshold. Use `0` for zero perceptual tolerance. |
 | `antialiasing` | `true` | Ignore likely anti-aliased pixels. |
+| `alignHeightChanges` | `false` | Align one conservatively detected added or removed block of rows. |
 | `maxDiffs` | unlimited | Stop after a maximum number of differing pixels. Capped results classify from the pixels observed before early exit, without cluster filtering. |
 | `includeDiffPixels` | `false` | Return individual differing pixel positions and intensities. |
 | `includeClusters` | `false` | Return connected regions of visual change. |

@@ -220,6 +220,14 @@ export interface CompareOptions {
   antialiasing?: boolean;
 
   /**
+   * Align one conservatively detected added or removed block of rows.
+   * Falls back to the normal same-coordinate comparison when the match is
+   * ambiguous or maxDiffs is set.
+   * @default false
+   */
+  alignHeightChanges?: boolean;
+
+  /**
    * Maximum number of differences to detect before stopping
    * Capped comparisons classify from observed pixel evidence because early
    * exit cannot determine whether a complete cluster meets minClusterSize.

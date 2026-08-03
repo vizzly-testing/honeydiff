@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-08-03
+
+### Changed
+
+- ✨ Improve diffs for single-block height shifts (#39)
+
+**Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.14.0...v0.15.0
+
 ## [0.14.0] - 2026-07-24
 
 ### Added
