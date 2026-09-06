@@ -1,6 +1,6 @@
 {
   "name": "@vizzly-testing/honeydiff",
-  "version": "0.15.0",
+  "version": "0.17.0",
   "description": "High-performance image diffing for Node.js - Native bindings to Honeydiff Rust library",
   "type": "module",
   "main": "index.js",
@@ -18,7 +18,7 @@
     "build-debug": "cargo build",
     "test": "node --test --experimental-strip-types tests/*.test.ts",
     "test:types": "tsc --noEmit",
-    "test:examples": "node examples/basic.js",
+    "test:examples": "node examples/basic.js ../../tests/fixtures/screenshots/vizzly-baseline.png ../../tests/fixtures/screenshots/vizzly-with-diff.png",
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "lint": "biome lint .",
@@ -51,7 +51,8 @@
     "assets/",
     "examples/",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=22.0.0"

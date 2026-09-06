@@ -25,26 +25,21 @@ x64/ARM64, and Windows x64.
 ## Quick Start
 
 ```js
-import { compare, quickCompare } from '@vizzly-testing/honeydiff';
+import { compare, imagesDiffer } from '@vizzly-testing/honeydiff';
 
-let changed = await quickCompare('baseline.png', 'current.png');
+let options = {
+  threshold: 2,
+  antialiasing: true,
+  minimumRegionPixels: 2,
+  alignHeightChanges: false,
+};
 
-if (changed) {
-  console.log('Visual change detected');
-}
+let result = await compare('baseline.png', 'current.png', options);
 
-let result = await compare('baseline.png', 'current.png', {
-  threshold: 2.0,
-  includeClusters: true,
-  diffPath: 'artifacts/diff.png',
-  maskPath: 'artifacts/mask.png',
-  overlayPath: 'artifacts/overlay.png',
-  overwrite: true,
-});
-
-console.log(result.isDifferent);
-console.log(result.diffPercentage);
-console.log(result.diffClusters);
+console.log(result.different);
+console.log(result.pixels.changed.total);
+console.log(result.difference.regions);
+console.log(await imagesDiffer('baseline.png', 'current.png', options));
 ```
 
 ## Why Honeydiff?
@@ -54,13 +49,13 @@ pieces visual regression systems usually need once screenshots get real:
 
 - CIEDE2000 perceptual color thresholds, with `2.0` as the default.
 - Zero perceptual tolerance with `threshold: 0`; disable AA and set
-  `minClusterSize: 1` for strict rendered-pixel matching.
+  `minimumRegionPixels: 1` for strict rendered-pixel matching.
 - Conservative anti-aliasing detection for font and sub-pixel rendering noise.
 - RGBA-aware comparison that detects opacity changes and ignores RGB payload
   hidden behind full transparency.
 - Variable-height screenshot support for full-page comparisons.
-- Diff, mask, and overlay image artifacts for debugging failures.
-- Spatial clusters, intensity stats, SSIM, GMSD, and diff fingerprints.
+- Diff, mask, and side-by-side image artifacts for debugging failures.
+- Exact region data, Delta E summaries, SSIM, MS-SSIM, GMSD, and diff fingerprints.
 - WCAG contrast screening and color vision deficiency simulation.
 - Async and sync APIs with TypeScript definitions included.
 
@@ -71,12 +66,10 @@ pieces visual regression systems usually need once screenshots get real:
 ```js
 import { compare } from '@vizzly-testing/honeydiff';
 
-let result = await compare('before.png', 'after.png', {
-  threshold: 2.0,
-});
+let result = await compare('before.png', 'after.png');
 
-if (result.isDifferent) {
-  console.log(`${result.diffPercentage.toFixed(2)}% of pixels changed`);
+if (result.different) {
+  console.log(`${result.pixels.changed.total} pixels changed`);
 }
 ```
 
@@ -97,79 +90,79 @@ let result = await compare(baseline, current);
 ```js
 import { compare } from '@vizzly-testing/honeydiff';
 
-let result = await compare('baseline.png', 'current.png', {
-  diffPath: 'artifacts/diff.png',
-  maskPath: 'artifacts/mask.png',
-  overlayPath: 'artifacts/overlay.png',
-  overwrite: true,
-});
+let result = await compare(
+  'baseline.png',
+  'current.png',
+  {},
+  {
+    diffPath: 'artifacts/diff.png',
+    maskPath: 'artifacts/mask.png',
+    sideBySidePath: 'artifacts/side-by-side.png',
+    overwrite: true,
+  }
+);
 ```
 
-### Group Differences Into Regions
+Artifact settings are a separate fourth argument. Honeydiff writes the files
+from the same comparison state but doesn't put image data in the result.
+
+### Inspect Changed Regions
 
 ```js
 import { compare } from '@vizzly-testing/honeydiff';
 
-let result = await compare('baseline.png', 'current.png', {
-  includeClusters: true,
-  minClusterSize: 2,
-  clusterMerge: true,
-});
+let result = await compare('baseline.png', 'current.png');
 
-for (let cluster of result.diffClusters ?? []) {
-  console.log(cluster.pixelCount, cluster.boundingBox);
+for (let region of result.difference.regions) {
+  console.log(region.pixels, region.bounds, region.deltaE);
 }
 ```
-
-### Persist Authoritative Mask Evidence
-
-Use diff-mask evidence when another system needs durable spatial facts
-without decoding the generated PNG:
-
-```js
-let result = await compare('baseline.png', 'current.png', {
-  includeDiffMaskEvidence: true,
-  maskPath: 'artifacts/mask.png',
-});
-
-console.log(result.diffMaskEvidence?.analysisContractHash);
-console.log(result.diffMaskEvidence?.components);
-```
-
-The components are exact 8-connected groups of retained mask pixels. They are
-separate from `diffClusters`, whose optional merge heuristics are intended for
-diagnostic presentation.
 
 ### Add Perceptual Metrics
 
 ```js
-import { compare } from '@vizzly-testing/honeydiff';
+import { analyze } from '@vizzly-testing/honeydiff';
 
-let result = await compare('baseline.png', 'current.png', {
-  includeSSIM: true,
-  includeGMSD: true,
-});
+let result = await analyze('baseline.png', 'current.png');
 
-console.log(result.perceptualScore);
-console.log(result.gmsdScore);
+console.log(result.perception.ssim);
+console.log(result.perception.msSsim);
+console.log(result.perception.gmsd);
 ```
+
+### Bound CPU Usage
+
+Use one process-wide limit when Honeydiff runs inside a worker service:
+
+```bash
+HONEYDIFF_THREADS=4 node visual-tests.js
+```
+
+Applications that cannot set the environment before startup can configure the
+same limit before their first operation:
+
+```js
+import { configureThreads } from '@vizzly-testing/honeydiff';
+
+configureThreads(4);
+```
+
+Repeating the same value is safe. Changing it after Honeydiff work starts
+throws instead of silently creating an oversubscribed pool.
 
 ### Align One Added Or Removed Block
 
 ```js
 let result = await compare('baseline.png', 'current.png', {
   alignHeightChanges: true,
-  maskPath: 'artifacts/mask.png',
 });
 ```
 
 This opt-in handles one exact added or removed block of rows, such as a banner,
-while keeping separate changes below it visible. Ambiguous matches,
-bottom-only growth, and comparisons using `maxDiffs` use the normal comparison.
-It does not handle multiple blocks, partial-width movement, or fuzzy matching.
-An accepted comparison temporarily uses one additional RGBA frame. SSIM and
-GMSD compare the unaligned overlapping portions, and the side-by-side overlay
-uses the original images.
+while keeping separate changes below it visible. Ambiguous matches and
+bottom-only growth use the normal comparison. It does not handle multiple
+blocks, partial-width movement, or fuzzy matching. `analyze` applies the same
+accepted row mapping before it calculates perceptual scores.
 
 ### Screenshot Contrast
 
@@ -201,60 +194,26 @@ await saveColorBlindnessSimulation(
 
 | Option | Default | Notes |
 | --- | --- | --- |
-| `threshold` | `2.0` | CIEDE2000 Delta E threshold. Use `0` for zero perceptual tolerance. |
-| `antialiasing` | `true` | Ignore likely anti-aliased pixels. |
-| `alignHeightChanges` | `false` | Align one conservatively detected added or removed block of rows. |
-| `maxDiffs` | unlimited | Stop after a maximum number of differing pixels. Capped results classify from the pixels observed before early exit, without cluster filtering. |
-| `includeDiffPixels` | `false` | Return individual differing pixel positions and intensities. |
-| `includeClusters` | `false` | Return connected regions of visual change. |
-| `includeDiffMaskEvidence` | `false` | Return authoritative diff-mask identity, dimensions, and exact components. |
-| `minClusterSize` | `2` | Filter tiny isolated clusters as noise. |
-| `clusterMerge` | disabled | Merge nearby clusters into logical text-like regions. |
-| `includeSSIM` | `false` | Calculate structural similarity. More expensive on large images. |
-| `includeGMSD` | `false` | Calculate fast edge-sensitive structural difference. |
-| `diffPath` | unset | Save a highlighted diff image. |
-| `maskPath` | unset | Save a binary diff mask. |
-| `overlayPath` | unset | Save an overlay comparison image. |
-| `overwrite` | `false` | Replace existing artifact files. |
+| `threshold` | `2` | CIEDE2000 tolerance. Use `0` for zero perceptual tolerance. |
+| `antialiasing` | `true` | Suppress conservative raster-coverage movement. |
+| `minimumRegionPixels` | `2` | Suppress smaller 8-connected visual regions. |
+| `alignHeightChanges` | `false` | Align one unambiguous inserted or removed row block. |
+
+There are no include flags. `compare` always returns its complete data.
 
 ## Result Shape
 
-```ts
-interface DiffResult {
-  isDifferent: boolean;
-  diffPercentage: number;
-  totalPixels: number;
-  diffPixels: number;
-  diffMaskPixels: number;
-  diffMaskComplete: boolean;
-  maskSemanticsVersion: string;
-  diffMaskEvidence: DiffMaskEvidence | null;
-  aaPixelsIgnored: number;
-  aaPercentage: number;
-  boundingBox: BoundingBox | null;
-  heightDiff: HeightDiff | null;
-  diffPixelsList: DiffPixel[] | null;
-  diffClusters: DiffCluster[] | null;
-  intensityStats: IntensityStats | null;
-  perceptualScore: number | null;
-  gmsdScore: number | null;
-}
-```
+The result separates every pixel into rendered-equal, suppressed, visual-change,
+or structural-change populations. Those counts always add up to `pixels.total`.
 
-`diffPixels` is the raw post-threshold/anti-aliasing count.
-`diffMaskPixels` is the retained count represented by the binary mask after
-`minClusterSize` filtering. It always matches the mask's nontransparent pixel
-count. If `diffMaskComplete` is `false`, `maxDiffs` stopped the scan early;
-the partial mask is useful for diagnostics but not complete spatial proof.
-Requesting `diffPixelsList` or `diffClusters` never changes that retained result.
-`diffMaskEvidence` is returned only when `includeDiffMaskEvidence` is enabled. Its
-native analysis hash covers every normalized option that can change retained
-pixels, and its component pixel counts sum to `diffMaskPixels`.
+`difference.regions` contains exact maximal 8-connected retained regions with
+bounds, centroid, density, perimeter, visual/structural composition, and real
+Delta E statistics where visual samples exist. `heightChange` explains added or
+removed rows and whether alignment was applied.
 
-The package also exports `version` from its installed manifest and
-`maskSemanticsVersion` from the native comparison engine.
-
-See [index.d.ts](./index.d.ts) for the full API surface.
+The result is JSON-native data. It never contains a `Buffer`, base64 image,
+packed mask, bitmap-sized array, or per-pixel coordinate list. See
+[`index.d.ts`](./index.d.ts) for the complete shape.
 
 ## Thresholds
 
@@ -294,6 +253,8 @@ for the current benchmark notes.
 
 ```js
 import {
+  analyze,
+  analyzeSync,
   analyzeWcagAllCvd,
   analyzeWcagContrast,
   analyzeWcagForCvd,
@@ -309,8 +270,8 @@ import {
   getImageMetadataFromFile,
   getImageMetadataFromFileSync,
   getImageMetadataSync,
-  quickCompare,
-  quickCompareSync,
+  imagesDiffer,
+  imagesDifferSync,
   saveAllColorBlindnessSimulations,
   saveColorBlindnessSimulation,
   saveWcagOverlay,

@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-09-06
+
+### Added
+
+- Added `HONEYDIFF_THREADS` and `configureThreads()` for one process-wide
+  Honeydiff compute budget.
+
+### Changed
+
+- Reduced `analyze` CPU and temporary memory by sharing luminance and structural
+  metric work, with an exact-content fast path.
+
+**Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.16.0...v0.17.0
+
+## [0.16.0] - 2026-08-03
+
+### Added
+
+- Added complete, data-only comparison results with reconciled pixel counts, exact retained regions, Delta E summaries, and explicit height-change data.
+- Added `analyze` for SSIM, MS-SSIM, and GMSD across Rust, Node, and the CLI.
+- Added optional diff, mask, and side-by-side artifacts without putting image data in the result.
+
+### Changed
+
+- Replaced metric include flags with four comparison settings: threshold, antialiasing, minimum region size, and height alignment.
+- Node and CLI now return the same nested analysis shape serialized by Rust.
+- Small suppressed regions now use bounded aggregate statistics instead of one object per region.
+- `images_differ` and fingerprints now derive from the same comparison result.
+
+### Removed
+
+- Removed early-exit results, public diff-pixel coordinates, packed mask payloads, and encoded image data from comparison results.
+
+**Full Changelog**: https://github.com/vizzly-testing/honeydiff/compare/v0.15.0...v0.16.0
+
 ## [0.15.0] - 2026-08-03
 
 ### Changed
